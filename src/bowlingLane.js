@@ -1,9 +1,10 @@
 /**
  * ================================================================
- *  BOWLING LANE MODULE - Day 3-4
+ *  BOWLING LANE MODULE - Day 3-4 / Day 5-6 Update
  *  
  *  Creates a realistic bowling lane with:
  *  - Standard dimensions: 18m length × 1m width × 0.1m thickness
+ *  - Two distinct zones: Oil Zone (0-12m) and Dry Zone (12-18m)
  *  - Wood-like material with realistic surface finish
  *  - Full shadow receiving support
  *  - Optional gutters and approach area
@@ -13,35 +14,94 @@
 import * as THREE from 'three';
 
 /**
- * Create the main bowling lane surface
- * @returns {THREE.Mesh} Bowling lane with wood-like material
+ * Create the oil zone of the bowling lane (0m to 12m)
+ * High glossy surface for better ball control feedback
+ * @returns {THREE.Mesh} Oil zone with glossy material
  */
-export function createBowlingLane() {
-  // Lane geometry with standard dimensions
+export function createOilZone() {
+  // Oil zone geometry: first 12 meters of lane
   const geometry = new THREE.BoxGeometry(
-    18,      // length (along X-axis)
+    12,      // length (0m to 12m along X-axis)
     0.1,     // thickness (Y-axis)
     1        // width (Z-axis)
   );
 
-  // Wood-like material
+  // Highly reflective, glossy material
   const material = new THREE.MeshStandardMaterial({
-    color: 0xc8a96e,           // Warm tan/wood color
-    roughness: 0.75,           // Textured wood surface
-    metalness: 0.05,           // Minimal metallic content
-    side: THREE.FrontSide
+    color: 0xc8a96e,           // Tan/wood color
+    roughness: 0.1,            // Very smooth, glossy surface
+    metalness: 0.05,           // Minimal metallic
+    side: THREE.FrontSide,
+    envMapIntensity: 1.0
   });
 
-  const lane = new THREE.Mesh(geometry, material);
+  const oilZone = new THREE.Mesh(geometry, material);
 
-  // Center the lane in the scene
-  lane.position.set(9, 0, 0);
+  // Position: centered in X for the first 12m (from 0 to 12)
+  // Actual lane center is at x=9, so oil zone center is at x=3
+  oilZone.position.set(3, 0, 0);
 
   // Shadow configuration
-  lane.castShadow = false;    // Lane doesn't cast shadows
-  lane.receiveShadow = true;  // Lane receives shadows from ball/lights
+  oilZone.castShadow = false;
+  oilZone.receiveShadow = true;
 
-  return lane;
+  return oilZone;
+}
+
+/**
+ * Create the dry zone of the bowling lane (12m to 18m)
+ * Matte surface with less reflection for pin impact zone
+ * @returns {THREE.Mesh} Dry zone with matte material
+ */
+export function createDryZone() {
+  // Dry zone geometry: last 6 meters of lane (12m to 18m)
+  const geometry = new THREE.BoxGeometry(
+    6,       // length (12m to 18m along X-axis)
+    0.1,     // thickness (Y-axis)
+    1        // width (Z-axis)
+  );
+
+  // Matte, less reflective material
+  const material = new THREE.MeshStandardMaterial({
+    color: 0xb8936e,           // Slightly darker tan for visual distinction
+    roughness: 0.6,            // Rough, matte surface
+    metalness: 0.02,           // Minimal metallic
+    side: THREE.FrontSide,
+    envMapIntensity: 0.6
+  });
+
+  const dryZone = new THREE.Mesh(geometry, material);
+
+  // Position: centered in X for the last 6m (from 12 to 18)
+  // Actual lane center is at x=9, so dry zone center is at x=15
+  dryZone.position.set(15, 0, 0);
+
+  // Shadow configuration
+  dryZone.castShadow = false;
+  dryZone.receiveShadow = true;
+
+  return dryZone;
+}
+
+/**
+ * Create a single unified lane with zone boundaries visible
+ * This version creates the full lane using the oil and dry zones
+ * 
+ * @returns {THREE.Group} Group containing oil and dry zones
+ */
+export function createBowlingLane() {
+  const laneGroup = new THREE.Group();
+  laneGroup.name = 'BowlingLane';
+
+  // Create and add oil zone
+  const oilZone = createOilZone();
+  laneGroup.add(oilZone);
+
+  // Create and add dry zone
+  const dryZone = createDryZone();
+  laneGroup.add(dryZone);
+
+  return laneGroup;
 }
 
 /**

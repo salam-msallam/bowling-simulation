@@ -3,6 +3,7 @@
 // المسؤول: العضو 5
 // المهمة: ربط الفيزياء بالرسم في كل frame
 // Day 3-4: Bowling Objects & Lane Integration
+// Day 5-6: Bowling Hall Environment
 // ================================================
 
 import * as THREE from 'three'
@@ -10,7 +11,8 @@ import { BallPhysics } from '/src/Physics/BallPhysics.js'
 import { PinPhysics }  from '/src/Physics/PinPhysics.js'
 import { createBowlingBall, resetBallPosition } from './bowlingBall.js'
 import { createPinFormation, resetPinFormation } from './bowlingPin.js'
-import { createLaneEnvironment } from './bowlingLane.js'
+import { createBowlingLane, createOilZone, createDryZone, createGutters, createApproachArea } from './bowlingLane.js'
+import { createBowlingHall, createHallFloor } from './environmentHall.js'
 
 
 // ════════════════════════════════════════════════
@@ -73,11 +75,26 @@ scene.add(fill)
 
 
 // ════════════════════════════════════════════════
-// 3. بناء المشهد - Day 3-4: Bowling Objects
+// 3. بناء المشهد - Day 5-6: Complete Hall Environment
 // ════════════════════════════════════════════════
 
-// Create bowling lane environment (lane, gutters, approach area)
-const laneEnvironment = createLaneEnvironment(scene)
+// Create complete bowling hall environment
+const bowlingHall = createBowlingHall(scene)
+
+// Add hall floor
+const hallFloor = createHallFloor()
+scene.add(hallFloor)
+
+// Create bowling lane with oil and dry zones
+const lane = createBowlingLane()
+scene.add(lane)
+
+// Create and add lane components (gutters and approach)
+const gutters = createGutters()
+scene.add(gutters)
+
+const approach = createApproachArea()
+scene.add(approach)
 
 // Create and add bowling ball
 const ballMesh = createBowlingBall()
@@ -86,32 +103,14 @@ scene.add(ballMesh)
 // Create and add 10 bowling pins
 const pinMeshes = createPinFormation(scene)
 
-// منطقة الزيت (لامعة — 0 إلى 12 متر)
-const oilMat = new THREE.MeshStandardMaterial({
-  color:     0xd4b97a,
-  roughness: 0.05,
-  metalness: 0.3,
-  transparent: true,
-  opacity: 0.6,
-})
-const oilMesh = new THREE.Mesh(new THREE.BoxGeometry(12, 0.001, 1.0), oilMat)
-oilMesh.position.set(6, 0.026, 0)
-scene.add(oilMesh)
-
-// — الأرضية حول المسار —
-const floorMesh = new THREE.Mesh(
-  new THREE.PlaneGeometry(40, 20),
-  new THREE.MeshStandardMaterial({ color: 0x1a1a2a, roughness: 1 })
-)
-floorMesh.rotation.x = -Math.PI / 2
-floorMesh.position.set(9, -0.026, 0)
-floorMesh.receiveShadow = true
-scene.add(floorMesh)
-
-console.log('✓ Day 3-4 Scene Objects Initialized:')
-console.log('  - Bowling Lane with Gutters & Approach Area')
-console.log('  - Bowling Ball (sphere 0.108m radius)')
-console.log('  - 10 Bowling Pins (composite geometry)')
+console.log('✓ Day 5-6 Complete Scene Initialized:')
+console.log('  - Bowling Hall Structure (walls, ceiling)')
+console.log('  - Hall Floor')
+console.log('  - Bowling Lane (Oil Zone: 0-12m + Dry Zone: 12-18m)')
+console.log('  - Lane Components (gutters, approach area)')
+console.log('  - Bowling Ball')
+console.log('  - 10 Bowling Pins')
+console.log('  - Decorative Neon Lighting (8 accent lights)')
 
 // ════════════════════════════════════════════════
 // 4. كلاسات الفيزياء
