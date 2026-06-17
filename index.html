@@ -1,13 +1,90 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>bowling-simulation</title>
+    <title>3D Bowling Simulation - Three.js</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #111827;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      }
+
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      /* HUD Info Panel */
+      #hud {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: rgba(17, 24, 39, 0.85);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 16px;
+        color: #e5e7eb;
+        font-size: 12px;
+        line-height: 1.8;
+        font-family: 'Monaco', 'Courier New', monospace;
+        z-index: 100;
+        min-width: 280px;
+      }
+
+      #hud h3 {
+        color: #f0f9ff;
+        font-size: 14px;
+        margin-bottom: 8px;
+        font-weight: 600;
+      }
+
+      #hud p {
+        margin: 4px 0;
+        color: #d1d5db;
+      }
+
+      #hud .label {
+        color: #9ca3af;
+        display: inline-block;
+        min-width: 100px;
+      }
+
+      #hud .value {
+        color: #60a5fa;
+        font-weight: 500;
+      }
+    </style>
   </head>
   <body>
-    <div id="app"></div>
+    <!-- Three.js Canvas rendered here -->
+    
+    <!-- HUD Info Panel -->
+    <!-- <div id="hud">
+      <h3>🎳 Bowling Simulation - Day 1-2</h3>
+      <p><span class="label">Status:</span> <span class="value" id="status">Initializing...</span></p>
+      <p><span class="label">Renderer:</span> <span class="value" id="renderer-info">Loading...</span></p>
+      <p><span class="label">FPS:</span> <span class="value" id="fps">0</span></p>
+      <p style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px;">
+        <span class="label">Lights:</span><br>
+        ├─ 2× AmbientLight (0.3 each)<br>
+        ├─ 1× SpotLight (shadows: 2048²)<br>
+        └─ GridHelper + PlaneGeometry
+      </p>
+    </div> -->
+
+    <!-- Load Three.js module and initialize scene -->
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

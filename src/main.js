@@ -2,11 +2,15 @@
 // main.js — الحلقة الرئيسية للمحاكاة
 // المسؤول: العضو 5
 // المهمة: ربط الفيزياء بالرسم في كل frame
+// Day 3-4: Bowling Objects & Lane Integration
 // ================================================
 
 import * as THREE from 'three'
 import { BallPhysics } from '/src/Physics/BallPhysics.js'
 import { PinPhysics }  from '/src/Physics/PinPhysics.js'
+import { createBowlingBall, resetBallPosition } from './bowlingBall.js'
+import { createPinFormation, resetPinFormation } from './bowlingPin.js'
+import { createLaneEnvironment } from './bowlingLane.js'
 
 
 // ════════════════════════════════════════════════
@@ -69,19 +73,18 @@ scene.add(fill)
 
 
 // ════════════════════════════════════════════════
-// 3. بناء المشهد (مؤقت — عضو 3 يطور هاد لاحقاً)
+// 3. بناء المشهد - Day 3-4: Bowling Objects
 // ════════════════════════════════════════════════
 
-// — المسار —
-const laneMat = new THREE.MeshStandardMaterial({
-  color:     0xc8a96e,
-  roughness: 0.75,
-  metalness: 0.05,
-})
-const laneMesh = new THREE.Mesh(new THREE.BoxGeometry(18, 0.05, 1.05), laneMat)
-laneMesh.position.set(9, 0, 0)
-laneMesh.receiveShadow = true
-scene.add(laneMesh)
+// Create bowling lane environment (lane, gutters, approach area)
+const laneEnvironment = createLaneEnvironment(scene)
+
+// Create and add bowling ball
+const ballMesh = createBowlingBall()
+scene.add(ballMesh)
+
+// Create and add 10 bowling pins
+const pinMeshes = createPinFormation(scene)
 
 // منطقة الزيت (لامعة — 0 إلى 12 متر)
 const oilMat = new THREE.MeshStandardMaterial({
@@ -95,34 +98,6 @@ const oilMesh = new THREE.Mesh(new THREE.BoxGeometry(12, 0.001, 1.0), oilMat)
 oilMesh.position.set(6, 0.026, 0)
 scene.add(oilMesh)
 
-// — الكرة —
-const ballMat = new THREE.MeshStandardMaterial({
-  color:     0x1a237e,
-  roughness: 0.25,
-  metalness: 0.15,
-})
-const ballMesh = new THREE.Mesh(new THREE.SphereGeometry(0.108, 32, 32), ballMat)
-ballMesh.castShadow    = true
-ballMesh.receiveShadow = true
-scene.add(ballMesh)
-
-// — الدبابيس العشرة —
-const pinMat = new THREE.MeshStandardMaterial({
-  color:     0xf5f5f5,
-  roughness: 0.4,
-  metalness: 0.1,
-})
-
-// الدبوس: رقبة رفيعة (CylinderGeometry) — عضو 3 يستبدله بنموذج أجمل
-const pinGeo  = new THREE.CylinderGeometry(0.032, 0.058, 0.38, 16)
-const pinMeshes = Array.from({ length: 10 }, () => {
-  const m = new THREE.Mesh(pinGeo, pinMat)
-  m.castShadow    = true
-  m.receiveShadow = true
-  scene.add(m)
-  return m
-})
-
 // — الأرضية حول المسار —
 const floorMesh = new THREE.Mesh(
   new THREE.PlaneGeometry(40, 20),
@@ -133,6 +108,10 @@ floorMesh.position.set(9, -0.026, 0)
 floorMesh.receiveShadow = true
 scene.add(floorMesh)
 
+console.log('✓ Day 3-4 Scene Objects Initialized:')
+console.log('  - Bowling Lane with Gutters & Approach Area')
+console.log('  - Bowling Ball (sphere 0.108m radius)')
+console.log('  - 10 Bowling Pins (composite geometry)')
 
 // ════════════════════════════════════════════════
 // 4. كلاسات الفيزياء
@@ -140,11 +119,6 @@ scene.add(floorMesh)
 
 const ballPhysics = new BallPhysics()
 const pinPhysics  = new PinPhysics()
-
-// ضبط المواضع الابتدائية للدبابيس من الفيزياء
-pinPhysics.getStates().forEach((s, i) => {
-  pinMeshes[i].position.set(s.position.x, s.position.y, s.position.z)
-})
 
 // ضبط موضع الكرة الابتدائي
 const initBall = ballPhysics.getState()
@@ -383,5 +357,5 @@ function startHUDUpdater() {
 // ════════════════════════════════════════════════
 
 buildTempUI()
-startHUDUpdater()
+// startHUDUpdater()
 requestAnimationFrame(gameLoop)
