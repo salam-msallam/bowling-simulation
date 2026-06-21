@@ -14,7 +14,8 @@ import { createPinFormation, resetPinFormation } from './bowlingPin.js'
 import { createBowlingLane, createOilZone, createDryZone, createGutters, createApproachArea } from './bowlingLane.js'
 import { createBowlingHall, createHallFloor } from './environmentHall.js'
 import { createMultiLaneBowlingAlley, getCenterLane } from './multiLaneAlley.js'
-import { createEnhancedBowlingHall } from './enhancedEnvironment.js'
+// import { createEnhancedBowlingHall } from './enhancedEnvironment.js'
+import { createLuxuryBowlingEnvironment } from './luxuryBowlingEnvironment.js'
 import { createPinAreaEnhancements } from './pinAreaEnhancement.js';// ════════════════════════════════════════════════
 // 1. إعداد Three.js
 // ════════════════════════════════════════════════
@@ -79,18 +80,20 @@ scene.add(fill)
 // ════════════════════════════════════════════════
 
 // Create enhanced bowling hall environment with ceiling, walls, seating, lighting, displays
-const enhancedHall = createEnhancedBowlingHall()
-scene.add(enhancedHall)
+// const enhancedHall = createEnhancedBowlingHall()
+// scene.add(enhancedHall)
+const { envGroup, update } = createLuxuryBowlingEnvironment(scene)
+scene.add(envGroup)
 console.log(scene.children)
 // Create multi-lane bowling alley (5 lanes with separators)
 const multiLaneAlley = createMultiLaneBowlingAlley()
 scene.add(multiLaneAlley)
 console.log(scene.children)
-createPinAreaEnhancements(scene);
 
 const { controller } = createPinAreaEnhancements(scene);
 // Get center lane (lane 3) for reference
 const centerLane = getCenterLane(multiLaneAlley)
+
 
 // For compatibility, extract lane components from center lane group
 // This allows physics to work with the main scene
@@ -157,10 +160,9 @@ function syncBall() {
 function syncPins() {
   const states = pinPhysics.getStates()
   states.forEach((s, i) => {
-    pinMeshes[i].position.set(s.position.x, s.position.y, s.position.z)
-    pinMeshes[i].rotation.z = s.rotation.z
-    // اخفِ الدبوس بعد ما يستقر على الأرض تماماً
-    pinMeshes[i].visible = s.position.y > -0.08
+pinMeshes[i].rotation.x = s.rotation.x
+pinMeshes[i].rotation.y = s.rotation.y
+pinMeshes[i].rotation.z = s.rotation.z
   })
 }
 
@@ -188,21 +190,42 @@ function updateFollowCamera(ballPos) {
 // عضو 2 يستبدل هاد بـ CollisionManager الحقيقي
 // ════════════════════════════════════════════════
 
-function checkCollisions() {
-  if (knockDone) return
-  const s = ballPhysics.getState()
+let hitDetected = false
+let cycleTriggered = false
 
-  // لما الكرة تقترب من منطقة الدبابيس
-  if (s.position.x >= 16.7) {
-    knockDone = true
-    // مؤقتاً: اسقط كل الدبابيس تباعاً (عضو 2 يحل هاد)
-    const delays = [0, 80, 120, 160, 200, 240, 280, 320, 360, 400]
-    delays.forEach((delay, i) => {
-      setTimeout(() => pinPhysics.knockPin(i), delay)
-    })
+function checkCollisions() {
+  if (cycleTriggered) return
+
+  const pins = pinPhysics.getStates()
+  const ball = ballPhysics.getState()
+
+  let hit = false
+
+  for (let i = 0; i < pins.length; i++) {
+    const p = pins[i]
+    if (!p.isStanding) continue
+
+    const dx = ball.position.x - p.position.x
+    const dz = ball.position.z - p.position.z
+    const dist = Math.sqrt(dx * dx + dz * dz)
+
+    if (dist < 0.25) {
+      pinPhysics.knockPin(i)   // الدبابيس تقع أول شي
+      hit = true
+    }
+  }
+
+  // إذا صار في ضرب
+  if (hit && !hitDetected) {
+    hitDetected = true
+
+    // ننتظر شوي قبل تشغيل الماكينة
+    setTimeout(() => {
+      cycleTriggered = true
+      controller.startCycle()
+    }, 500)
   }
 }
-
 
 // ════════════════════════════════════════════════
 // 9. الحلقة الرئيسية
@@ -235,7 +258,7 @@ function gameLoop(currentTime) {
         controller.startCycle();
     }
   }
-
+update(currentTime / 1000)
   // ── خطوة 5: ارسم المشهد (دائماً، حتى لو واقف)
   renderer.render(scene, camera)
 }

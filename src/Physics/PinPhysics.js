@@ -20,13 +20,19 @@ const INIT_POSITIONS = [
 
 export class PinPhysics {
   constructor() {
-    this.pins = INIT_POSITIONS.map((p, i) => ({
-      id:         i,
-      position:   { x: p.x, y: 0.19, z: p.z },
-      rotation:   { x: 0, y: 0, z: 0 },
-      isStanding: true,
-      _fallT:     -1,   // مؤقت السقوط، -1 = لم يسقط
-    }))
+  this.pins = INIT_POSITIONS.map((p, i) => ({
+  id:         i,
+  position:   { x: p.x, y: 0.19, z: p.z },
+  rotation:   { x: 0, y: 0, z: 0 },
+  isStanding: true,
+  _fallT:     -1,
+
+  // جديد
+  _slideX: (Math.random() - 0.5) * 0.4,
+  _slideZ: (Math.random() - 0.5) * 0.4,
+  _spinX:  (Math.random() - 0.5) * 4,
+  _spinY:  (Math.random() - 0.5) * 4,
+}))
   }
 
   // يُستدعى من CollisionManager (عضو 2) أو من main.js مؤقتاً
@@ -38,15 +44,33 @@ export class PinPhysics {
   }
 
   // يُستدعى من main.js كل frame
-  update(dt) {
-    this.pins.forEach(pin => {
-      if (pin._fallT < 0) return
-      pin._fallT      += dt
-      // دوران تدريجي للسقوط
-      pin.rotation.z   = Math.min(Math.PI / 2, pin._fallT * 3.5)
-      pin.position.y   = Math.max(-0.05, 0.19 - pin._fallT * 0.4)
-    })
-  }
+ update(dt) {
+  this.pins.forEach(pin => {
+    if (pin._fallT < 0) return
+
+    pin._fallT += dt
+
+    const t = pin._fallT
+
+    // السقوط الأساسي
+    pin.rotation.z = Math.min(Math.PI / 2, t * 3.5)
+
+    // دوران إضافي ليبدو أكثر واقعية
+    pin.rotation.x += pin._spinX * dt
+    pin.rotation.y += pin._spinY * dt
+
+    // انزلاق خفيف على الأرض
+    pin.position.x += pin._slideX * dt
+    pin.position.z += pin._slideZ * dt
+
+    // تباطؤ الانزلاق مع الوقت
+    pin._slideX *= 0.985
+    pin._slideZ *= 0.985
+
+    // نزول تدريجي
+    pin.position.y = Math.max(-0.05, 0.19 - t * 0.4)
+  })
+}
 
   // الواجهة الرسمية — main.js يقرأ منها فقط
   getStates() {

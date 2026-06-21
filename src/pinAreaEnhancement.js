@@ -95,128 +95,90 @@ function createPinsetterMachine() {
   const group = new THREE.Group();
   group.name = 'PinsetterMachine';
 
-  // ── Static overhead housing ──────────────────────────────────
-  const housing = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.9, 1.1), MAT.metalDark);
+  const housing = new THREE.Mesh(
+    new THREE.BoxGeometry(1.8, 0.9, 1.1),
+    MAT.metalDark
+  );
   housing.position.set(20.2, 2.55, 0);
-  housing.castShadow = true;
   group.add(housing);
 
-  // Housing bottom lip
-  const lip = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.06, 1.14), MAT.metalLight);
+  const lip = new THREE.Mesh(
+    new THREE.BoxGeometry(1.8, 0.06, 1.14),
+    MAT.metalLight
+  );
   lip.position.set(20.2, 2.07, 0);
   group.add(lip);
 
-  // Front face panel
-  const frontPanel = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.75, 1.0), MAT.metalMid);
+  const frontPanel = new THREE.Mesh(
+    new THREE.BoxGeometry(0.04, 0.75, 1.0),
+    MAT.metalMid
+  );
   frontPanel.position.set(19.32, 2.55, 0);
   group.add(frontPanel);
 
-  // ── Status indicator lights on housing front ─────────────────
-  const redLed  = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 8), MAT.redLight.clone());
+  const redLed = new THREE.Mesh(
+    new THREE.SphereGeometry(0.04, 8, 8),
+    MAT.redLight.clone()
+  );
   redLed.position.set(19.31, 2.75, -0.2);
   group.add(redLed);
 
-  const greenLed = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 8), MAT.greenLight.clone());
+  const greenLed = new THREE.Mesh(
+    new THREE.SphereGeometry(0.04, 8, 8),
+    MAT.greenLight.clone()
+  );
   greenLed.position.set(19.31, 2.75, 0.2);
-  greenLed.material.emissiveIntensity = 0.0; // off by default
+  greenLed.material.emissiveIntensity = 0;
   group.add(greenLed);
 
-  // ── Static support columns ───────────────────────────────────
-  [{ x: 19.4, z: -0.52 }, { x: 19.4, z: 0.52 },
-   { x: 21.0, z: -0.52 }, { x: 21.0, z: 0.52 }].forEach(p => {
-    const col = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.6, 0.12), MAT.metalDark);
-    col.position.set(p.x, 1.3, p.z);
-    col.castShadow = true;
-    group.add(col);
-  });
-
-  // Crossbars
-  [1.62, 0.9].forEach(y => {
-    const cb = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 1.04), MAT.metalMid);
-    cb.position.set(19.4, y, 0);
-    group.add(cb);
-  });
-
-  // Safety stripe
-  const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.08, 1.04), MAT.yellow);
-  stripe.position.set(19.35, 0.9, 0);
-  group.add(stripe);
-
-  // Conduits
-  [{ x: 19.46, z: -0.5 }, { x: 19.46, z: 0.5 }].forEach(p => {
-    const c = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.8, 8), MAT.metalLight);
-    c.position.set(p.x, 1.5, p.z);
-    group.add(c);
-  });
-
-  // Side wall brackets
-  [{ z: -0.52 }, { z: 0.52 }].forEach(p => {
-    const b = new THREE.Mesh(new THREE.BoxGeometry(1.65, 0.08, 0.08), MAT.metalDark);
-    b.position.set(20.18, 2.5, p.z);
-    group.add(b);
-  });
-
-  // ── ANIMATED PART A: Spotter / Pin-carrier arm ───────────────
-  //    Moves vertically: raised (Y=2.05) → lowered (Y=0.42)
-  //    Also has grip fingers that spread / close
   const spotterArm = new THREE.Group();
   spotterArm.name = 'SpotterArm';
 
-  // Main arm shaft (vertical rod)
-  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.9, 10), MAT.metalMid);
+  const shaft = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.03, 0.03, 0.9, 10),
+    MAT.metalMid
+  );
   shaft.position.set(0, 0.45, 0);
   spotterArm.add(shaft);
 
-  // Arm cross-frame
-  const frame = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.88), MAT.metalLight);
-  frame.position.set(0, 0.0, 0);
+  const frame = new THREE.Mesh(
+    new THREE.BoxGeometry(0.06, 0.06, 0.88),
+    MAT.metalLight
+  );
+  frame.position.set(0, 0, 0);
   spotterArm.add(frame);
 
-  // 10 grip "fingers" (small cylinders representing pin holders)
   const fingerPositions = [
-    { z: 0.0   },                          // pin 1
-    { z: -0.106 }, { z: 0.106 },           // pins 2-3
-    { z: -0.212 }, { z: 0.0   }, { z: 0.212 }, // pins 4-6
-    { z: -0.318 }, { z: -0.106}, { z: 0.106 }, { z: 0.318 }, // pins 7-10
+    { z: 0.0 },
+    { z: -0.106 }, { z: 0.106 },
+    { z: -0.212 }, { z: 0.0 }, { z: 0.212 },
+    { z: -0.318 }, { z: -0.106 }, { z: 0.106 }, { z: 0.318 },
   ];
+
   fingerPositions.forEach((fp, i) => {
-    const finger = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.15, 8), MAT.metalLight);
+    const finger = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.012, 0.012, 0.15, 8),
+      MAT.metalLight
+    );
     finger.position.set(0, -0.11, fp.z);
     finger.name = `Finger_${i}`;
     spotterArm.add(finger);
   });
 
-  // Spotter starts raised (above housing)
-  spotterArm.position.set(19.6, 2.05, 0);
+  spotterArm.position.set(17.6, 2.05, 0);
   group.add(spotterArm);
 
-  // ── ANIMATED PART B: Sweep bar ───────────────────────────────
-  //    Rotates on a pivot at the back:
-  //    idle → tilted back (rotationX = -Math.PI/2.5)
-  //    sweep → swings forward (rotationX = +0.2)
-  const sweepPivot = new THREE.Group();
-  sweepPivot.name = 'SweepPivot';
-  sweepPivot.position.set(20.5, 1.05, 0);  // pivot point
-
-  const sweepBar = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 1.06), MAT.yellow);
-  sweepBar.position.set(-0.55, 0, 0);      // arm extends forward from pivot
-
-  // Rubber edge on sweep bar (faces the pins)
-  const rubber = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.35, 1.06),
-    new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.95, metalness: 0.0 }));
-  rubber.position.set(-0.06, -0.14, 0);
-  sweepBar.add(rubber);
-
-  sweepPivot.add(sweepBar);
-  sweepPivot.rotation.x = -Math.PI / 2.2;  // tilted back at rest
-  group.add(sweepPivot);
-
-  // ── ANIMATED PART C: Curtain / backstop (rises to let sweep pass) ──
   const curtain = new THREE.Mesh(
     new THREE.BoxGeometry(0.06, 0.7, 1.06),
-    new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9, metalness: 0.0,
-                                     transparent: true, opacity: 0.85 })
+    new THREE.MeshStandardMaterial({
+      color: 0x1a1a1a,
+      roughness: 0.9,
+      metalness: 0,
+      transparent: true,
+      opacity: 0.85
+    })
   );
+
   curtain.name = 'Curtain';
   curtain.position.set(19.55, 0.55, 0);
   group.add(curtain);
@@ -225,14 +187,12 @@ function createPinsetterMachine() {
     group,
     animParts: {
       spotterArm,
-      sweepPivot,
       curtain,
-      redLed:   redLed.material,
+      redLed: redLed.material,
       greenLed: greenLed.material,
     }
   };
 }
-
 // ════════════════════════════════════════════════════════════════
 //  3.  BACK WALL
 // ════════════════════════════════════════════════════════════════
@@ -242,7 +202,7 @@ function createPinAreaBackWall() {
 
   const wallMat = new THREE.MeshStandardMaterial({ color: 0x1c2028, roughness: 0.8, metalness: 0.05 });
   const wall = new THREE.Mesh(new THREE.BoxGeometry(0.25, 4.2, 2.2), wallMat);
-  wall.position.set(22.5, 2.0, 0);
+ wall.position.set(19.0, 2.0, 0);
   wall.receiveShadow = true;
   group.add(wall);
 
@@ -391,76 +351,117 @@ function createPinsetterController(animParts) {
     },
 
     /** Call every frame with dt (seconds) */
-    update(dt) {
-      if (!running) return;
-      phaseTime += dt;
+   update(dt) {
+  if (!running) return;
 
-      const dur = PHASE_DURATION[phase] || 0.001;
-      const t   = easeInOut(clamp01(phaseTime / dur));
+  phaseTime += dt;
 
-      switch (phase) {
+  const dur = PHASE_DURATION[phase] || 0.001;
+  const raw = clamp01(phaseTime / dur);
+  const t = raw * raw * (3 - 2 * raw);
 
-        // ── Phase: LOWER — spotter descends to pin level ──────
-        case 'LOWER':
-          animParts.spotterArm.position.y = lerp(SPOTTER_RAISED, SPOTTER_LOWERED, t);
-          // Curtain stays down
-          if (phaseTime >= dur) advancePhase();
-          break;
+  // اهتزاز ثابت (ما يتراكم)
+  const shake = Math.sin(phaseTime * 35) * 0.002;
 
-        // ── Phase: SCAN — brief pause, grip closes ────────────
-        case 'SCAN':
-          // Fingers wiggle slightly (scale on Z)
-          animParts.spotterArm.children.forEach((c, i) => {
-            if (c.name && c.name.startsWith('Finger')) {
-              c.scale.z = 1.0 + 0.06 * Math.sin(phaseTime * 8 + i);
-            }
-          });
-          if (phaseTime >= dur) advancePhase();
-          break;
+  animParts.spotterArm.position.x = 17.6 + shake;
+  animParts.spotterArm.position.z = 0;
 
-        // ── Phase: LIFT — spotter rises carrying standing pins ─
-        case 'LIFT':
-          animParts.spotterArm.position.y = lerp(SPOTTER_LOWERED, SPOTTER_LIFTED, t);
-          // Raise curtain out of sweep path
-          animParts.curtain.position.y = lerp(CURTAIN_DOWN, CURTAIN_UP, t);
-          if (phaseTime >= dur) advancePhase();
-          break;
+  switch (phase) {
 
-        // ── Phase: SWEEP — sweep bar pushes across lane ────────
-        case 'SWEEP':
-          animParts.sweepPivot.rotation.x = lerp(SWEEP_REST, SWEEP_FORWARD, t);
-          if (phaseTime >= dur) advancePhase();
-          break;
+    case 'LOWER':
+      animParts.spotterArm.position.y = THREE.MathUtils.lerp(
+        animParts.spotterArm.position.y,
+        SPOTTER_LOWERED,
+        0.08
+      );
 
-        // ── Phase: REPLACE — set pins back down, sweep retracts ─
-        case 'REPLACE':
-          animParts.spotterArm.position.y = lerp(SPOTTER_LIFTED, SPOTTER_LOWERED, t);
-          animParts.sweepPivot.rotation.x = lerp(SWEEP_FORWARD, SWEEP_REST, t);
-          if (phaseTime >= dur) advancePhase();
-          break;
+      if (phaseTime >= dur) advancePhase();
+      break;
 
-        // ── Phase: RAISE — everything returns to idle ──────────
-        case 'RAISE':
-          animParts.spotterArm.position.y = lerp(SPOTTER_LOWERED, SPOTTER_RAISED, t);
-          animParts.curtain.position.y    = lerp(CURTAIN_UP, CURTAIN_DOWN, t);
-          // Fingers open
-          animParts.spotterArm.children.forEach(c => {
-            if (c.name && c.name.startsWith('Finger')) c.scale.z = 1.0;
-          });
-          if (phaseTime >= dur) advancePhase();
-          break;
+    case 'SCAN':
+      animParts.spotterArm.children.forEach((c, i) => {
+        if (c.name && c.name.startsWith('Finger')) {
+          c.scale.z = 1.0 + 0.06 * Math.sin(phaseTime * 8 + i);
+        }
+      });
 
-        // ── Phase: DONE — flash green ──────────────────────────
-        case 'DONE':
-          setLed(false, Math.sin(phaseTime * 10) > 0);  // flash
-          if (phaseTime >= dur) {
-            setLed(false, false);
-            advancePhase();
-          }
-          break;
+      if (phaseTime >= dur) advancePhase();
+      break;
+
+    case 'LIFT':
+      animParts.spotterArm.position.y = THREE.MathUtils.lerp(
+        animParts.spotterArm.position.y,
+        SPOTTER_LIFTED,
+        0.08
+      );
+
+      animParts.curtain.position.y = lerp(
+        CURTAIN_DOWN,
+        CURTAIN_UP,
+        t
+      );
+
+      if (phaseTime >= dur) advancePhase();
+      break;
+
+    case 'SWEEP':
+      animParts.sweepPivot.rotation.x = lerp(
+        SWEEP_REST,
+        SWEEP_FORWARD,
+        t
+      );
+
+      if (phaseTime >= dur) advancePhase();
+      break;
+
+    case 'REPLACE':
+      animParts.spotterArm.position.y = lerp(
+        SPOTTER_LIFTED,
+        SPOTTER_LOWERED,
+        t
+      );
+
+      animParts.sweepPivot.rotation.x = lerp(
+        SWEEP_FORWARD,
+        SWEEP_REST,
+        t
+      );
+
+      if (phaseTime >= dur) advancePhase();
+      break;
+
+    case 'RAISE':
+      animParts.spotterArm.position.y = lerp(
+        SPOTTER_LOWERED,
+        SPOTTER_RAISED,
+        t
+      );
+
+      animParts.curtain.position.y = lerp(
+        CURTAIN_UP,
+        CURTAIN_DOWN,
+        t
+      );
+
+      animParts.spotterArm.children.forEach(c => {
+        if (c.name && c.name.startsWith('Finger')) {
+          c.scale.z = 1.0;
+        }
+      });
+
+      if (phaseTime >= dur) advancePhase();
+      break;
+
+    case 'DONE':
+      setLed(false, Math.sin(phaseTime * 10) > 0);
+
+      if (phaseTime >= dur) {
+        setLed(false, false);
+        advancePhase();
       }
-    },
-
+      break;
+  }
+},
     /** Read current phase for external HUD display if needed */
     getPhase() { return phase; },
     isRunning() { return running; },
