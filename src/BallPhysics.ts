@@ -12,6 +12,8 @@ class BallPhysics {
   private axisTilt: number = 0; // زاوية ميلان المحور (للـ Hook)
   private revRate: number = 0; // عدد دورات اللاعب  يعني كيف اللاعب  يحرك إيده لما يرمي:
 
+
+  
   constructor(mass: number, radius: number, position: THREE.Vector3) {
     this.mass = mass;
     this.radius = radius;
@@ -27,6 +29,7 @@ class BallPhysics {
     this.axisTilt = revRate * 0.08;
     this.phase = "sliding";
   }
+  
 
   // ═══════════════════════════════
   // الواجهة المتفق عليها مع عضو 5
@@ -105,6 +108,7 @@ class BallPhysics {
     }
   }
 }
+
 // fs    = μ · mass · g     ← قوة الاحتكاك الكلية
 // thook = fs · R · sin(φ)  ← عزم الانحراف الجانبي
 // φ     = axisTilt          ← زاوية ميلان محور الكرة

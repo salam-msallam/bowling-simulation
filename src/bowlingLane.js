@@ -10,6 +10,7 @@
  *  - Optional gutters and approach area
  * ================================================================
  */
+import { scene } from './main.js'
 
 import * as THREE from 'three';
 

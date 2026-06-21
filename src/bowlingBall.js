@@ -10,6 +10,7 @@
  */
 
 import * as THREE from 'three';
+import { scene } from './main.js'
 
 /**
  * Create a bowling ball mesh

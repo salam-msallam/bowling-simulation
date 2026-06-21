@@ -137,29 +137,28 @@ let knockDone  = false   // منع تكرار كشف التصادم المؤقت
 // 6. دوال الربط: الفيزياء → النماذج
 // هذا هو جوهر مهمة العضو 5
 // ════════════════════════════════════════════════
-
 function syncBall() {
-  const s = ballPhysics.getState()
+  if (!ballMesh) return  // ✅ guard
 
+  const s = ballPhysics.getState()
   ballMesh.position.set(s.position.x, s.position.y, s.position.z)
-  ballMesh.rotation.z = s.rotation.z    // التدحرج حول المحور Z
-  ballMesh.rotation.x = s.rotation.x   // التدحرج حول المحور X (Hook)
+  ballMesh.rotation.z = s.rotation.z
+  ballMesh.rotation.x = s.rotation.x
 
   if (s.phase !== 'idle') {
     updateFollowCamera(s.position)
   }
 }
-
 function syncPins() {
   const states = pinPhysics.getStates()
   states.forEach((s, i) => {
+    if (!pinMeshes[i]) return  // ✅ guard
+
     pinMeshes[i].position.set(s.position.x, s.position.y, s.position.z)
     pinMeshes[i].rotation.z = s.rotation.z
-    // اخفِ الدبوس بعد ما يستقر على الأرض تماماً
     pinMeshes[i].visible = s.position.y > -0.08
   })
 }
-
 
 // ════════════════════════════════════════════════
 // 7. كاميرا المتابعة
@@ -170,11 +169,18 @@ const _camTarget = new THREE.Vector3()
 const _lookTarget = new THREE.Vector3()
 
 function updateFollowCamera(ballPos) {
-  // الكاميرا تتبع الكرة من الخلف بمسافة 3 متر وارتفاع 1.5
-  _camTarget.set(ballPos.x - 3, 1.5, ballPos.z * 0.5)
-  camera.position.lerp(_camTarget, 0.04)  // 0.04 = سلاسة المتابعة
+  const behindDistance = 4
+  const minX = -2  // never go behind starting point
 
-  _lookTarget.set(ballPos.x + 2, ballPos.y, ballPos.z)
+  _camTarget.set(
+    Math.max(ballPos.x - behindDistance, minX),
+    1.8,
+    ballPos.z * 0.3   // subtle Z tracking, not full 1:1
+  )
+  camera.position.lerp(_camTarget, 0.05)
+
+  // look slightly ahead of the ball, not at it directly
+  _lookTarget.set(ballPos.x + 3, ballPos.y + 0.3, ballPos.z * 0.5)
   camera.lookAt(_lookTarget)
 }
 
@@ -183,15 +189,24 @@ function updateFollowCamera(ballPos) {
 // 8. كشف التصادم المؤقت
 // عضو 2 يستبدل هاد بـ CollisionManager الحقيقي
 // ════════════════════════════════════════════════
+// constants at the top of main.js
+const LANE_HALF_WIDTH = 0.425   // half of 0.85m lane width
+const GUTTER_DAMPING  = 0.4     // ball loses speed in gutter
 
 function checkCollisions() {
-  if (knockDone) return
   const s = ballPhysics.getState()
+  if (s.phase === 'idle' || s.phase === 'stopped' || s.phase === 'gutter') return
 
-  // لما الكرة تقترب من منطقة الدبابيس
-  if (s.position.x >= 16.7) {
+  // ✅ تحقق من الـ gutter أولاً
+  if (Math.abs(s.position.z) > LANE_HALF_WIDTH) {
+    ballPhysics.enterGutter(GUTTER_DAMPING)
+    knockDone = true  // ما في تصادم مع دبابيس
+    return
+  }
+
+  // تصادم الدبابيس بس لو الكرة على المسار
+  if (!knockDone && s.position.x >= 16.7) {
     knockDone = true
-    // مؤقتاً: اسقط كل الدبابيس تباعاً (عضو 2 يحل هاد)
     const delays = [0, 80, 120, 160, 200, 240, 280, 320, 360, 400]
     delays.forEach((delay, i) => {
       setTimeout(() => pinPhysics.knockPin(i), delay)
@@ -199,41 +214,36 @@ function checkCollisions() {
   }
 }
 
-
 // ════════════════════════════════════════════════
 // 9. الحلقة الرئيسية
 // ════════════════════════════════════════════════
 
 function gameLoop(currentTime) {
   requestAnimationFrame(gameLoop)
-
-  // dt = الزمن بين frame وframe (بالثانية)
-  // Math.min يمنع dt كبير لو توقف المتصفح لحظة
-  const dt = Math.min((currentTime - lastTime) / 1000, 0.05)
-  lastTime  = currentTime
+  const dt = Math.min((currentTime - lastTime) / 1000, 0.033)  // ✅ 30fps كحد أدنى
+  lastTime = currentTime
 
   if (isRunning) {
-    // ── خطوة 1: حدّث الفيزياء ──────────────────
-    ballPhysics.update(dt)
-    pinPhysics.update(dt)
+    // ✅ sub-steps: شغّل الفيزياء مرتين بكل frame لدقة أعلى
+    const subSteps = 2
+    const subDt = dt / subSteps
 
-    // ── خطوة 2: كشف التصادم ────────────────────
-    checkCollisions()
+    for (let i = 0; i < subSteps; i++) {
+      ballPhysics.update(subDt)
+      pinPhysics.update(subDt)
+      checkCollisions()
+    }
 
-    // ── خطوة 3: انقل النتائج للنماذج ───────────
     syncBall()
     syncPins()
 
-    // ── خطوة 4: إذا الكرة وقفت أوقف المحاكاة ──
     if (ballPhysics.getState().phase === 'stopped') {
       isRunning = false
     }
   }
 
-  // ── خطوة 5: ارسم المشهد (دائماً، حتى لو واقف)
   renderer.render(scene, camera)
 }
-
 
 // ════════════════════════════════════════════════
 // 10. دوال التحكم (تُستدعى من الواجهة)
@@ -284,6 +294,7 @@ export function getPhysicsState() {
 // 11. واجهة مؤقتة بسيطة
 // عضو 4 يستبدل هاد بواجهته الكاملة
 // ════════════════════════════════════════════════
+export { scene, camera, renderer }
 
 function buildTempUI() {
   // CSS
@@ -349,7 +360,6 @@ function startHUDUpdater() {
     `
   }, 100)
 }
-
 
 // ════════════════════════════════════════════════
 // 12. تشغيل كل شي

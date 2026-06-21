@@ -11,6 +11,7 @@
  */
 
 import * as THREE from 'three';
+import { scene } from './main.js'
 
 /**
  * Create a single bowling pin
