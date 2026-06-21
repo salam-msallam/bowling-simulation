@@ -1,22 +1,28 @@
 /**
  * ================================================================
- *  BOWLING LANE MODULE - Day 3-4 / Day 5-6 Update
+ *  BOWLING LANE MODULE - Day 3-4 / Day 5-6 / Phase 1 Visual Enhancement
  *  
  *  Creates a realistic bowling lane with:
  *  - Standard dimensions: 18m length × 1m width × 0.1m thickness
  *  - Two distinct zones: Oil Zone (0-12m) and Dry Zone (12-18m)
  *  - Wood-like material with realistic surface finish
+ *  - Procedural textures for visual depth
  *  - Full shadow receiving support
  *  - Optional gutters and approach area
  * ================================================================
  */
-import { scene } from './main.js'
 
 import * as THREE from 'three';
+import { generateOilPatternTexture, generateDryZoneTexture } from './textureGenerator.js';
+
+// Generate textures once at module load
+const oilZoneTexture = generateOilPatternTexture(256, 256);
+const dryZoneTexture = generateDryZoneTexture(256, 256);
 
 /**
  * Create the oil zone of the bowling lane (0m to 12m)
  * High glossy surface for better ball control feedback
+ * Phase 1 Enhancement: Added texture, proper reflections
  * @returns {THREE.Mesh} Oil zone with glossy material
  */
 export function createOilZone() {
@@ -27,13 +33,15 @@ export function createOilZone() {
     1        // width (Z-axis)
   );
 
-  // Highly reflective, glossy material
+  // Phase 1 Enhancement: Better glossy material with texture for oil zone
+  // Represents highly polished, wet surface with visible reflection capability
   const material = new THREE.MeshStandardMaterial({
-    color: 0xc8a96e,           // Tan/wood color
-    roughness: 0.1,            // Very smooth, glossy surface
-    metalness: 0.05,           // Minimal metallic
+    map: oilZoneTexture,              // Add procedural wood texture
+    color: 0xc8a96e,                  // Tan/wood color
+    roughness: 0.08,                  // Very smooth, glossy surface (was 0.1)
+    metalness: 0.05,                  // Minimal metallic
     side: THREE.FrontSide,
-    envMapIntensity: 1.0
+    envMapIntensity: 1.3              // Strong reflections (was 1.0)
   });
 
   const oilZone = new THREE.Mesh(geometry, material);
@@ -52,6 +60,7 @@ export function createOilZone() {
 /**
  * Create the dry zone of the bowling lane (12m to 18m)
  * Matte surface with less reflection for pin impact zone
+ * Phase 1 Enhancement: Added texture, rougher finish
  * @returns {THREE.Mesh} Dry zone with matte material
  */
 export function createDryZone() {
@@ -62,13 +71,15 @@ export function createDryZone() {
     1        // width (Z-axis)
   );
 
-  // Matte, less reflective material
+  // Phase 1 Enhancement: Better matte material with texture for dry zone
+  // Represents less polished, grippier surface with more texture
   const material = new THREE.MeshStandardMaterial({
-    color: 0xb8936e,           // Slightly darker tan for visual distinction
-    roughness: 0.6,            // Rough, matte surface
-    metalness: 0.02,           // Minimal metallic
+    map: dryZoneTexture,              // Add procedural wood texture
+    color: 0xb8936e,                  // Slightly darker tan for visual distinction
+    roughness: 0.55,                  // Rough, matte surface (was 0.6)
+    metalness: 0.02,                  // Minimal metallic
     side: THREE.FrontSide,
-    envMapIntensity: 0.6
+    envMapIntensity: 0.4              // Reduced reflections (was 0.6)
   });
 
   const dryZone = new THREE.Mesh(geometry, material);

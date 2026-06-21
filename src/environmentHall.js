@@ -10,7 +10,7 @@
  *  - Full shadow support
  * ================================================================
  */
-import { scene } from './main.js'
+// import { scene } from './main.js'
 
 
 import * as THREE from 'three';

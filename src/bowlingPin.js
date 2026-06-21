@@ -11,7 +11,6 @@
  */
 
 import * as THREE from 'three';
-import { scene } from './main.js'
 
 /**
  * Create a single bowling pin
@@ -20,12 +19,14 @@ import { scene } from './main.js'
 export function createPin() {
   const pinGroup = new THREE.Group();
 
-  // Material: glossy white
+  // Phase 1 Enhancement: Improved white material with realistic gloss and subsurface-like quality
+  // More realistic than flat white - simulates glossy ceramic with slight subsurface scattering effect
   const material = new THREE.MeshStandardMaterial({
-    color: 0xf5f5f5,           // Off-white
-    roughness: 0.35,           // Smooth glossy surface
-    metalness: 0.05,           // Minimal metallic content
-    side: THREE.FrontSide
+    color: 0xffffff,           // Pure white
+    roughness: 0.25,           // Smoother for glossy finish (was 0.35)
+    metalness: 0.08,           // Slightly increased for sheen (was 0.05)
+    side: THREE.FrontSide,
+    envMapIntensity: 0.8       // Subtle environment reflections
   });
 
   // ─────────────────────────────────────────────────────────────

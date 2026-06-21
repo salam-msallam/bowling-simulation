@@ -10,7 +10,6 @@
  */
 
 import * as THREE from 'three';
-import { scene } from './main.js'
 
 /**
  * Create a bowling ball mesh
@@ -24,12 +23,14 @@ export function createBowlingBall() {
     32      // height segments for smooth surface
   );
 
-  // High-quality material with realistic gloss
+  // Phase 1 Enhancement: High-gloss reflective bowling ball material
+  // Simulates professional-grade bowling ball with mirror-like finish
   const material = new THREE.MeshStandardMaterial({
     color: 0x1a237e,           // Deep blue
-    roughness: 0.3,            // Smooth, polished surface
-    metalness: 0.2,            // Slight metallic sheen
-    side: THREE.FrontSide
+    roughness: 0.15,           // Very smooth, high-gloss surface (reduced from 0.3)
+    metalness: 0.4,            // Increased metallic sheen for reflections (was 0.2)
+    side: THREE.FrontSide,
+    envMapIntensity: 1.2       // Strong environment reflections
   });
 
   const ball = new THREE.Mesh(geometry, material);
