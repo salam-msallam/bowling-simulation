@@ -8,6 +8,14 @@ import * as THREE from 'three'
 import { BallPhysics } from '/src/Physics/BallPhysics.js'
 import { PinPhysics }  from '/src/Physics/PinPhysics.js'
 
+// استيراد شغل العضو 4 (الواجهات والمؤثرات) من الملفات المستقلة ◄
+import { DOMInterface } from '/src/ui/DOMInterface.js'
+import { BallTrail } from '/src/fx/BallTrail.js'
+import { CollisionParticles } from '/src/fx/CollisionParticles.js'
+
+const OIL_PATTERN_END_X = 12
+const SETTLE_FRAME_DELAY = 45
+const PIN_REST_EPSILON = 0.0005
 
 // ════════════════════════════════════════════════
 // 1. إعداد Three.js
@@ -18,12 +26,11 @@ scene.background = new THREE.Color(0x111827)
 scene.fog = new THREE.Fog(0x111827, 20, 40)
 
 const camera = new THREE.PerspectiveCamera(
-  60,                                   // زاوية الرؤية
+  60,
   window.innerWidth / window.innerHeight,
   0.1,
   100
 )
-// الموضع الابتدائي: خلف اللاعب
 camera.position.set(-2, 1.8, 0)
 camera.lookAt(18, 0, 0)
 
@@ -34,7 +41,6 @@ renderer.shadowMap.enabled = true
 renderer.shadowMap.type    = THREE.PCFSoftShadowMap
 document.body.appendChild(renderer.domElement)
 
-// تكيف حجم النافذة
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight
   camera.updateProjectionMatrix()
@@ -46,11 +52,9 @@ window.addEventListener('resize', () => {
 // 2. الإضاءة
 // ════════════════════════════════════════════════
 
-// إضاءة خافتة للكل
 const ambient = new THREE.AmbientLight(0xffffff, 0.35)
 scene.add(ambient)
 
-// بقعة ضوء رئيسية فوق المسار
 const spot = new THREE.SpotLight(0xfff5e0, 2.5)
 spot.position.set(9, 7, 0)
 spot.angle       = 0.45
@@ -62,7 +66,6 @@ spot.target.position.set(9, 0, 0)
 scene.add(spot)
 scene.add(spot.target)
 
-// إضاءة ثانوية من الجانب لإبراز العمق
 const fill = new THREE.DirectionalLight(0x6688cc, 0.4)
 fill.position.set(-5, 4, 3)
 scene.add(fill)
@@ -72,7 +75,6 @@ scene.add(fill)
 // 3. بناء المشهد (مؤقت — عضو 3 يطور هاد لاحقاً)
 // ════════════════════════════════════════════════
 
-// — المسار —
 const laneMat = new THREE.MeshStandardMaterial({
   color:     0xc8a96e,
   roughness: 0.75,
@@ -83,7 +85,6 @@ laneMesh.position.set(9, 0, 0)
 laneMesh.receiveShadow = true
 scene.add(laneMesh)
 
-// منطقة الزيت (لامعة — 0 إلى 12 متر)
 const oilMat = new THREE.MeshStandardMaterial({
   color:     0xd4b97a,
   roughness: 0.05,
@@ -95,7 +96,19 @@ const oilMesh = new THREE.Mesh(new THREE.BoxGeometry(12, 0.001, 1.0), oilMat)
 oilMesh.position.set(6, 0.026, 0)
 scene.add(oilMesh)
 
-// — الكرة —
+const oilEndLineMat = new THREE.MeshStandardMaterial({
+  color: 0xf8fafc,
+  emissive: 0x38bdf8,
+  emissiveIntensity: 0.7,
+  roughness: 0.25,
+  transparent: true,
+  opacity: 0.55,
+  depthWrite: false,
+})
+const oilEndLineMesh = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.004, 1.08), oilEndLineMat)
+oilEndLineMesh.position.set(OIL_PATTERN_END_X, 0.032, 0)
+scene.add(oilEndLineMesh)
+
 const ballMat = new THREE.MeshStandardMaterial({
   color:     0x1a237e,
   roughness: 0.25,
@@ -106,14 +119,17 @@ ballMesh.castShadow    = true
 ballMesh.receiveShadow = true
 scene.add(ballMesh)
 
-// — الدبابيس العشرة —
+// استدعاء الـ Trail الخاص بك ◄
+const ballTrail = new BallTrail()
+ballTrail.addTo(scene)
+const collisionParticles = new CollisionParticles(scene)
+
 const pinMat = new THREE.MeshStandardMaterial({
   color:     0xf5f5f5,
   roughness: 0.4,
   metalness: 0.1,
 })
 
-// الدبوس: رقبة رفيعة (CylinderGeometry) — عضو 3 يستبدله بنموذج أجمل
 const pinGeo  = new THREE.CylinderGeometry(0.032, 0.058, 0.38, 16)
 const pinMeshes = Array.from({ length: 10 }, () => {
   const m = new THREE.Mesh(pinGeo, pinMat)
@@ -123,7 +139,6 @@ const pinMeshes = Array.from({ length: 10 }, () => {
   return m
 })
 
-// — الأرضية حول المسار —
 const floorMesh = new THREE.Mesh(
   new THREE.PlaneGeometry(40, 20),
   new THREE.MeshStandardMaterial({ color: 0x1a1a2a, roughness: 1 })
@@ -141,12 +156,10 @@ scene.add(floorMesh)
 const ballPhysics = new BallPhysics()
 const pinPhysics  = new PinPhysics()
 
-// ضبط المواضع الابتدائية للدبابيس من الفيزياء
 pinPhysics.getStates().forEach((s, i) => {
   pinMeshes[i].position.set(s.position.x, s.position.y, s.position.z)
 })
 
-// ضبط موضع الكرة الابتدائي
 const initBall = ballPhysics.getState()
 ballMesh.position.set(initBall.position.x, initBall.position.y, initBall.position.z)
 
@@ -157,20 +170,28 @@ ballMesh.position.set(initBall.position.x, initBall.position.y, initBall.positio
 
 let lastTime   = performance.now()
 let isRunning  = false
-let knockDone  = false   // منع تكرار كشف التصادم المؤقت
+let knockDone  = false   
+let activeFrameCount = 0
+let settleFrameCount = 0
+let summaryShown = false
+let previousPinStates = null
+let currentOilPattern = 'Medium'
+let activeTimeouts = []
+
+// التتبع المحلي لضمان عداد الرمية 10/10 ◄
+let knockedPinsTracker = new Array(10).fill(false)
 
 
 // ════════════════════════════════════════════════
 // 6. دوال الربط: الفيزياء → النماذج
-// هذا هو جوهر مهمة العضو 5
 // ════════════════════════════════════════════════
 
 function syncBall() {
   const s = ballPhysics.getState()
 
   ballMesh.position.set(s.position.x, s.position.y, s.position.z)
-  ballMesh.rotation.z = s.rotation.z    // التدحرج حول المحور Z
-  ballMesh.rotation.x = s.rotation.x   // التدحرج حول المحور X (Hook)
+  ballMesh.rotation.z = s.rotation.z    
+  ballMesh.rotation.x = s.rotation.x   
 
   if (s.phase !== 'idle') {
     updateFollowCamera(s.position)
@@ -182,8 +203,7 @@ function syncPins() {
   states.forEach((s, i) => {
     pinMeshes[i].position.set(s.position.x, s.position.y, s.position.z)
     pinMeshes[i].rotation.z = s.rotation.z
-    // اخفِ الدبوس بعد ما يستقر على الأرض تماماً
-    pinMeshes[i].visible = s.position.y > -0.08
+    pinMeshes[i].visible = s.position.y > -0.08 && !knockedPinsTracker[i]
   })
 }
 
@@ -192,14 +212,12 @@ function syncPins() {
 // 7. كاميرا المتابعة
 // ════════════════════════════════════════════════
 
-// Vector3 مُعاد استخدامه لتجنب إنشاء objects جديدة كل frame
 const _camTarget = new THREE.Vector3()
 const _lookTarget = new THREE.Vector3()
 
 function updateFollowCamera(ballPos) {
-  // الكاميرا تتبع الكرة من الخلف بمسافة 3 متر وارتفاع 1.5
   _camTarget.set(ballPos.x - 3, 1.5, ballPos.z * 0.5)
-  camera.position.lerp(_camTarget, 0.04)  // 0.04 = سلاسة المتابعة
+  camera.position.lerp(_camTarget, 0.04)  
 
   _lookTarget.set(ballPos.x + 2, ballPos.y, ballPos.z)
   camera.lookAt(_lookTarget)
@@ -207,22 +225,111 @@ function updateFollowCamera(ballPos) {
 
 
 // ════════════════════════════════════════════════
-// 8. كشف التصادم المؤقت
-// عضو 2 يستبدل هاد بـ CollisionManager الحقيقي
+// 8. كشف التصادم والمزامنة
 // ════════════════════════════════════════════════
 
 function checkCollisions() {
   if (knockDone) return
   const s = ballPhysics.getState()
 
-  // لما الكرة تقترب من منطقة الدبابيس
   if (s.position.x >= 16.7) {
     knockDone = true
-    // مؤقتاً: اسقط كل الدبابيس تباعاً (عضو 2 يحل هاد)
+    collisionParticles.emit(s.position)
+    
     const delays = [0, 80, 120, 160, 200, 240, 280, 320, 360, 400]
     delays.forEach((delay, i) => {
-      setTimeout(() => pinPhysics.knockPin(i), delay)
+      const id = setTimeout(() => {
+        pinPhysics.knockPin(i)
+        knockedPinsTracker[i] = true 
+      }, delay)
+      activeTimeouts.push(id)
     })
+  }
+}
+
+function pinStateDelta(a, b) {
+  return Math.max(
+    Math.abs(a.position.x - b.position.x),
+    Math.abs(a.position.y - b.position.y),
+    Math.abs(a.position.z - b.position.z),
+    Math.abs(a.rotation.x - b.rotation.x),
+    Math.abs(a.rotation.y - b.rotation.y),
+    Math.abs(a.rotation.z - b.rotation.z)
+  )
+}
+
+function arePinsAtRest(states) {
+  if (!previousPinStates) {
+    previousPinStates = states.map(s => ({
+      position: { ...s.position },
+      rotation: { ...s.rotation },
+    }))
+    return false
+  }
+
+  const atRest = states.every((s, i) => pinStateDelta(s, previousPinStates[i]) <= PIN_REST_EPSILON)
+  previousPinStates = states.map(s => ({
+    position: { ...s.position },
+    rotation: { ...s.rotation },
+  }))
+  return atRest
+}
+
+function isSimulationSettled() {
+  const ball = ballPhysics.getState()
+  const pins = pinPhysics.getStates()
+  
+  const ballAtRest = ball.phase === 'stopped' || ball.velocity <= 0.01
+  const pinsAtRest = arePinsAtRest(pins)
+
+  if (ballAtRest && pinsAtRest) {
+    settleFrameCount += 1
+  } else {
+    settleFrameCount = 0
+  }
+
+  return ballAtRest && pinsAtRest && settleFrameCount >= SETTLE_FRAME_DELAY
+}
+
+function countKnockedPins() {
+  return knockedPinsTracker.filter(Boolean).length
+}
+
+function showSimulationSummary() {
+  if (summaryShown) return
+
+  const ball = ballPhysics.getState()
+  summaryShown = true
+  isRunning = false
+  ui.showSummary({
+    pinsKnockedDown: countKnockedPins(),
+    finalBallVelocity: ball.velocity,
+    oilPatternName: currentOilPattern,
+  })
+}
+
+function resetFrameState({ hideSummary = true } = {}) {
+  isRunning = false
+  
+  activeTimeouts.forEach(id => clearTimeout(id))
+  activeTimeouts = []
+  knockedPinsTracker = new Array(10).fill(false)
+
+  ballPhysics.reset()
+  pinPhysics.reset()
+  knockDone = false
+  activeFrameCount = 0
+  settleFrameCount = 0
+  summaryShown = false
+  previousPinStates = null
+  syncBall()
+  syncPins()
+  ballTrail.clear()
+  camera.position.set(-2, 1.8, 0)
+  camera.lookAt(18, 0, 0)
+
+  if (hideSummary) {
+    ui.hideSummary()
   }
 }
 
@@ -234,52 +341,42 @@ function checkCollisions() {
 function gameLoop(currentTime) {
   requestAnimationFrame(gameLoop)
 
-  // dt = الزمن بين frame وframe (بالثانية)
-  // Math.min يمنع dt كبير لو توقف المتصفح لحظة
   const dt = Math.min((currentTime - lastTime) / 1000, 0.05)
   lastTime  = currentTime
 
   if (isRunning) {
-    // ── خطوة 1: حدّث الفيزياء ──────────────────
+    activeFrameCount += 1
+
     ballPhysics.update(dt)
     pinPhysics.update(dt)
 
-    // ── خطوة 2: كشف التصادم ────────────────────
     checkCollisions()
 
-    // ── خطوة 3: انقل النتائج للنماذج ───────────
     syncBall()
     syncPins()
+    collisionParticles.update(dt)
 
-    // ── خطوة 4: إذا الكرة وقفت أوقف المحاكاة ──
-    if (ballPhysics.getState().phase === 'stopped') {
-      isRunning = false
+    if (isSimulationSettled()) {
+      showSimulationSummary()
     }
   }
 
-  // ── خطوة 5: ارسم المشهد (دائماً، حتى لو واقف)
+  const ballState = ballPhysics.getState()
+  const trailIsEmitting = isRunning && ballState.phase !== 'idle' && ballState.phase !== 'stopped'
+  ballTrail.update(dt, ballMesh.position, trailIsEmitting)
+
   renderer.render(scene, camera)
 }
 
 
 // ════════════════════════════════════════════════
 // 10. دوال التحكم (تُستدعى من الواجهة)
-// عضو 4 يستدعي هالدوال من واجهته
 // ════════════════════════════════════════════════
 
-export function launchBall(v0, angle, revRate) {
-  // أعد الضبط أولاً
-  ballPhysics.reset()
-  pinPhysics.reset()
-  knockDone = false
-  syncBall()
-  syncPins()
+export function launchBall(v0, angle, revRate, oilPattern = 'Medium') {
+  resetFrameState()
+  currentOilPattern = oilPattern
 
-  // أعد الكاميرا للخلف
-  camera.position.set(-2, 1.8, 0)
-  camera.lookAt(18, 0, 0)
-
-  // أطلق الكرة
   ballPhysics.launch(v0, angle, revRate)
   isRunning = true
 }
@@ -289,14 +386,12 @@ export function stopSimulation() {
 }
 
 export function resetSimulation() {
-  isRunning = false
-  ballPhysics.reset()
-  pinPhysics.reset()
-  knockDone = false
-  syncBall()
-  syncPins()
-  camera.position.set(-2, 1.8, 0)
-  camera.lookAt(18, 0, 0)
+  currentOilPattern = 'Medium'
+  resetFrameState()
+}
+
+export function newFrame() {
+  resetFrameState()
 }
 
 export function getPhysicsState() {
@@ -308,80 +403,37 @@ export function getPhysicsState() {
 
 
 // ════════════════════════════════════════════════
-// 11. واجهة مؤقتة بسيطة
-// عضو 4 يستبدل هاد بواجهته الكاملة
+// 12. تشغيل النظام وربط الأحداث
 // ════════════════════════════════════════════════
 
-function buildTempUI() {
-  // CSS
-  const style = document.createElement('style')
-  style.textContent = `
-    body { margin:0; overflow:hidden; font-family: system-ui, sans-serif; }
-    #temp-ui {
-      position: fixed; top: 16px; right: 16px;
-      background: rgba(0,0,0,0.75);
-      backdrop-filter: blur(6px);
-      color: #fff; padding: 16px 18px;
-      border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);
-      display: flex; flex-direction: column; gap: 10px;
-      min-width: 200px;
-    }
-    #temp-ui h3 { margin:0 0 4px; font-size:13px; color:#aaa; font-weight:400; }
-    #temp-ui button {
-      padding: 9px 0; border-radius: 7px; border: none;
-      cursor: pointer; font-size: 13px; font-weight: 500;
-      transition: opacity .15s;
-    }
-    #temp-ui button:hover { opacity: 0.85; }
-    #btn-launch { background: #2563eb; color: #fff; }
-    #btn-stop   { background: #374151; color: #fff; }
-    #btn-reset  { background: #1f2937; color: #9ca3af; }
-    #hud {
-      font-size: 11px; color: #9ca3af;
-      line-height: 1.9; border-top: 1px solid rgba(255,255,255,0.08);
-      padding-top: 8px; margin-top: 2px;
-    }
-    #hud b { color: #e5e7eb; }
-  `
-  document.head.appendChild(style)
+const ui = new DOMInterface()
 
-  // HTML
-  const ui = document.createElement('div')
-  ui.id = 'temp-ui'
-  ui.innerHTML = `
-    <h3>🎳 Bowling Simulation</h3>
-    <button id="btn-launch">▶ Launch</button>
-    <button id="btn-stop">⏹ Stop</button>
-    <button id="btn-reset">↺ Reset</button>
-    <div id="hud">اضغط Launch للبدء</div>
-  `
-  document.body.appendChild(ui)
+ui.onLaunch(({ v0, angle, revRate, oilPattern }) => {
+  launchBall(v0, angle, revRate, oilPattern)
+  updateSimulationHUD()
+})
 
-  document.getElementById('btn-launch').onclick = () => launchBall(7.5, 0, 350)
-  document.getElementById('btn-stop').onclick   = () => stopSimulation()
-  document.getElementById('btn-reset').onclick  = () => resetSimulation()
+ui.onReset(() => {
+  resetSimulation()
+  updateSimulationHUD()
+})
+
+ui.onNewFrame(() => {
+  newFrame()
+  updateSimulationHUD()
+})
+
+function getKineticFrictionCoefficient(x) {
+  return x <= OIL_PATTERN_END_X ? 0.05 : 0.20
 }
 
-// تحديث HUD كل 100ms (منفصل عن حلقة الرسم لتوفير الأداء)
-function startHUDUpdater() {
-  setInterval(() => {
-    const hud = document.getElementById('hud')
-    if (!hud) return
-    const { ball } = getPhysicsState()
-    hud.innerHTML = `
-      Phase: <b>${ball.phase}</b><br>
-      Velocity: <b>${ball.velocity.toFixed(2)} m/s</b><br>
-      ω: <b>${ball.angularVelocity.toFixed(2)} rad/s</b><br>
-      Position X: <b>${ball.position.x.toFixed(2)} m</b>
-    `
-  }, 100)
+function updateSimulationHUD() {
+  const { ball } = getPhysicsState()
+  const x = ball.position.x
+  const muK = getKineticFrictionCoefficient(x)
+  ui.updateHUD(ball.velocity, ball.angularVelocity, ball.phase, muK, x, activeFrameCount, OIL_PATTERN_END_X)
 }
 
+setInterval(updateSimulationHUD, 100)
 
-// ════════════════════════════════════════════════
-// 12. تشغيل كل شي
-// ════════════════════════════════════════════════
-
-buildTempUI()
-startHUDUpdater()
 requestAnimationFrame(gameLoop)
