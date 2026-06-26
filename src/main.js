@@ -5,8 +5,9 @@
 // ================================================
 
 import * as THREE from "three";
-import { BallPhysics } from "/src/Physics/BallPhysics.js";
+import  BallPhysics from "/src/Physics/BallPhysics.js";
 import { PinPhysics } from "/src/Physics/PinPhysics.js";
+import { CollisionManager } from "/src/Physics/CollisionManager.js"; // ← ضيفي هاد السطر
 
 // ════════════════════════════════════════════════
 // 1. إعداد Three.js
@@ -137,8 +138,12 @@ scene.add(floorMesh);
 // 4. كلاسات الفيزياء
 // ════════════════════════════════════════════════
 
-const ballPhysics = new BallPhysics();
+// تمرير البارامترات لكود رفيقتك (الكتلة 7.25 كغ، نصف القطر 0.108، الموقع الابتدائي عند z=0)
+const ballPhysics = new BallPhysics(7.25, 0.108, new THREE.Vector3(0, 0.19, 0));
 const pinPhysics = new PinPhysics();
+
+// تهيئة مدير التصادمات تبعك وربطه بالكرة والدبابيس
+const collisionManager = new CollisionManager(ballPhysics, pinPhysics); // ← ضيفي هاد السطر
 
 // ضبط المواضع الابتدائية للدبابيس من الفيزياء
 pinPhysics.getStates().forEach((s, i) => {
@@ -204,25 +209,12 @@ function updateFollowCamera(ballPos) {
   _lookTarget.set(ballPos.x + 2, ballPos.y, ballPos.z);
   camera.lookAt(_lookTarget);
 }
-
 // ════════════════════════════════════════════════
-// 8. كشف التصادم المؤقت
-// عضو 2 يستبدل هاد بـ CollisionManager الحقيقي
+// 8. كشف التصادم الحقيقي (شغل العضو 2)
 // ════════════════════════════════════════════════
-
 function checkCollisions() {
-  if (knockDone) return;
-  const s = ballPhysics.getState();
-
-  // لما الكرة تقترب من منطقة الدبابيس
-  if (s.position.x >= 16.7) {
-    knockDone = true;
-    // مؤقتاً: اسقط كل الدبابيس تباعاً (عضو 2 يحل هاد)
-    const delays = [0, 80, 120, 160, 200, 240, 280, 320, 360, 400];
-    delays.forEach((delay, i) => {
-      setTimeout(() => pinPhysics.knockPin(i), delay);
-    });
-  }
+  // استدعاء دالة الفحص تبعك الحقيقية اللي بتفحص المسافات وبتعمل الـ Deflection والـ Domino
+  collisionManager.checkCollisions(); 
 }
 
 // ════════════════════════════════════════════════
@@ -239,7 +231,8 @@ function gameLoop(currentTime) {
 
   if (isRunning) {
     // ── خطوة 1: حدّث الفيزياء ──────────────────
-    ballPhysics.update(dt);
+    const currentMu = 0.04; // أو استدعاء ملف الـ oilZone.getMu(ballPhysics.position.z) لو ركبتوه
+    ballPhysics.update(dt, currentMu); // تمرير الـ mu لكود رفيقتك المحدث
     pinPhysics.update(dt);
 
     // ── خطوة 2: كشف التصادم ────────────────────
@@ -372,6 +365,7 @@ function startHUDUpdater() {
     `;
   }, 100);
 }
+
 
 // ════════════════════════════════════════════════
 // 12. تشغيل كل شي

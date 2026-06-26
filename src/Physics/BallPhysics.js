@@ -79,6 +79,13 @@ class BallPhysics {
       this.position.x += this.velocity.x * dt;
     }
   }
+  reset() {
+  this.velocity.set(0, 0, 0);
+  this.angularVelocity.set(0, 0, 0);
+  this.phase = "sliding";
+  this.axisTilt = 0;
+  this.revRate = 0;
+  }
 }
 
 export default BallPhysics;
