@@ -1,24 +1,29 @@
-// DOMInterface.js
-// المسؤول: العضو 4 
-
-// Use the installed Vite dependency instead of a CDN import.
 import GUI from 'lil-gui';
 
 export class DOMInterface {
-  constructor() {
+  constructor(renderSettings = {}) {
     this.launchCallback = null;
     this.resetCallback = null;
     this.newFrameCallback = null;
+    this.renderSettingsCallback = null;
+    this.cameraModeCallback = null;
 
-    // كائن تخزين المدخلات (السلايدرات)
     this.inputs = {
       v0: 7.5,
       angle: 0,
       revRate: 250,
-      oilPattern: 'Medium'
+      oilPattern: 'Medium',
     };
 
-    // كائن الـ HUD والأزرار
+    this.renderSettings = {
+      bloom: renderSettings.bloom ?? true,
+      bloomStrength: renderSettings.bloomStrength ?? 0.38,
+      bloomRadius: renderSettings.bloomRadius ?? 0.38,
+      bloomThreshold: renderSettings.bloomThreshold ?? 0.72,
+      exposure: renderSettings.exposure ?? 1.08,
+      shadows: renderSettings.shadows ?? true,
+    };
+
     this.hudData = {
       speed: '0.00 m/s',
       angularVelocity: '0.00 rad/s',
@@ -28,7 +33,7 @@ export class DOMInterface {
       oilPatternEnd: '12.00 m',
       frameCount: 0,
       Launch: () => this.triggerLaunch(),
-      Reset: () => this.triggerReset()
+      Reset: () => this.triggerReset(),
     };
 
     this.summaryData = {
@@ -36,62 +41,92 @@ export class DOMInterface {
       finalVelocity: '0.00 m/s',
       finalOil: 'Medium',
       'New Frame': () => this.triggerNewFrame(),
-      'Summary Reset': () => this.triggerReset()
+      'Summary Reset': () => this.triggerReset(),
+    };
+
+    this.cameraActions = {
+      'Player View': () => this.triggerCameraMode('player'),
+      'Impact View': () => this.triggerCameraMode('impact'),
     };
 
     this.initGUI();
   }
 
   initGUI() {
-    // إنشاء القائمة الرئيسية وتثبيتها على اليسار
-    this.guiControls = new GUI({ title: '🚀 Bowling Controls' });
+    this.guiControls = new GUI({ title: 'Bowling Simulation' });
     this.guiControls.domElement.style.position = 'fixed';
-    this.guiControls.domElement.style.left = '20px';
+    this.guiControls.domElement.style.left = '18px';
     this.guiControls.domElement.style.right = 'auto';
-    this.guiControls.domElement.style.top = '20px';
+    this.guiControls.domElement.style.top = '18px';
     this.guiControls.domElement.style.zIndex = '100';
+    this.guiControls.domElement.style.setProperty('--background-color', 'rgba(8, 11, 18, 0.92)');
+    this.guiControls.domElement.style.setProperty('--widget-color', '#172033');
+    this.guiControls.domElement.style.setProperty('--text-color', '#e5e7eb');
+    this.guiControls.domElement.style.setProperty('--title-background-color', '#0b1220');
 
-    this.guiControls.add(this.inputs, 'v0', 5, 10, 0.1).name('Velocity (v0)');
-    this.guiControls.add(this.inputs, 'angle', -5, 5, 0.1).name('Launch Angle');
-    this.guiControls.add(this.inputs, 'revRate', 0, 400, 10).name('Rev Rate (rpm)');
-    
-    this.guiControls.add(this.inputs, 'oilPattern', ['Short', 'Medium', 'Long'])
-      .name('Oil Pattern')
-      .onChange(value => {
+    const launchFolder = this.guiControls.addFolder('Launch');
+    launchFolder.add(this.inputs, 'v0', 5, 10, 0.1).name('Velocity');
+    launchFolder.add(this.inputs, 'angle', -5, 5, 0.1).name('Angle (deg)');
+    launchFolder.add(this.inputs, 'revRate', 0, 400, 10).name('Rev Rate');
+    launchFolder.add(this.hudData, 'Launch').name('Launch Ball');
+    launchFolder.add(this.hudData, 'Reset').name('Reset');
+    launchFolder.open();
+
+    const oilFolder = this.guiControls.addFolder('Oil Pattern');
+    oilFolder
+      .add(this.inputs, 'oilPattern', ['Short', 'Medium', 'Long'])
+      .name('Pattern')
+      .onChange((value) => {
         let endDist = 12;
         if (value === 'Short') endDist = 9;
         if (value === 'Long') endDist = 15;
         this.updateHUD(0, 0, 'idle', 0.05, 0, 0, endDist);
       });
+    oilFolder.open();
 
-    this.guiControls.add(this.hudData, 'Launch').name('▶ Launch Ball');
-    this.guiControls.add(this.hudData, 'Reset').name('🔄 Reset System');
+    const cameraFolder = this.guiControls.addFolder('Camera');
+    cameraFolder.add(this.cameraActions, 'Player View').name('1 - Player View');
+    cameraFolder.add(this.cameraActions, 'Impact View').name('3 - Impact View');
+    cameraFolder.open();
 
-    // قائمة الـ HUD وتثبيتها على اليمين
-    this.guiHUD = new GUI({ title: '📊 Live HUD' });
+    const renderFolder = this.guiControls.addFolder('Render Quality');
+    renderFolder.add(this.renderSettings, 'bloom').name('Bloom').onChange(() => this.emitRenderSettings());
+    renderFolder.add(this.renderSettings, 'bloomStrength', 0, 1.6, 0.01).name('Bloom Strength').onChange(() => this.emitRenderSettings());
+    renderFolder.add(this.renderSettings, 'bloomRadius', 0, 1, 0.01).name('Bloom Radius').onChange(() => this.emitRenderSettings());
+    renderFolder.add(this.renderSettings, 'bloomThreshold', 0, 1, 0.01).name('Bloom Threshold').onChange(() => this.emitRenderSettings());
+    renderFolder.add(this.renderSettings, 'exposure', 0.55, 1.8, 0.01).name('Exposure').onChange(() => this.emitRenderSettings());
+    renderFolder.add(this.renderSettings, 'shadows').name('Shadows').onChange(() => this.emitRenderSettings());
+
+    this.guiHUD = new GUI({ title: 'Live HUD' });
     this.guiHUD.domElement.style.position = 'fixed';
-    this.guiHUD.domElement.style.right = '20px';
-    this.guiHUD.domElement.style.top = '20px';
+    this.guiHUD.domElement.style.right = '18px';
+    this.guiHUD.domElement.style.top = '18px';
     this.guiHUD.domElement.style.zIndex = '100';
+    this.guiHUD.domElement.style.setProperty('--background-color', 'rgba(8, 11, 18, 0.86)');
+    this.guiHUD.domElement.style.setProperty('--widget-color', '#172033');
+    this.guiHUD.domElement.style.setProperty('--text-color', '#e5e7eb');
+    this.guiHUD.domElement.style.setProperty('--title-background-color', '#0b1220');
 
+    const hudFolder = this.guiHUD.addFolder('Ball State');
     this.controllersHUD = {
-      speed: this.guiHUD.add(this.hudData, 'speed').name('Speed').disable(),
-      angularVelocity: this.guiHUD.add(this.hudData, 'angularVelocity').name('Angular Vel').disable(),
-      phase: this.guiHUD.add(this.hudData, 'phase').name('Phase').disable(),
-      friction: this.guiHUD.add(this.hudData, 'friction').name('Friction (µk)').disable(),
-      displacement: this.guiHUD.add(this.hudData, 'displacement').name('Displacement').disable(),
-      oilPatternEnd: this.guiHUD.add(this.hudData, 'oilPatternEnd').name('Oil End').disable(),
-      frameCount: this.guiHUD.add(this.hudData, 'frameCount').name('Frame Counter').disable()
+      speed: hudFolder.add(this.hudData, 'speed').name('Speed').disable(),
+      angularVelocity: hudFolder.add(this.hudData, 'angularVelocity').name('Angular Vel').disable(),
+      phase: hudFolder.add(this.hudData, 'phase').name('Phase').disable(),
+      friction: hudFolder.add(this.hudData, 'friction').name('Friction').disable(),
+      displacement: hudFolder.add(this.hudData, 'displacement').name('Distance').disable(),
+      oilPatternEnd: hudFolder.add(this.hudData, 'oilPatternEnd').name('Oil End').disable(),
+      frameCount: hudFolder.add(this.hudData, 'frameCount').name('Frames').disable(),
     };
+    hudFolder.open();
 
-    // قائمة الخلاصة في المنتصف
-    this.guiSummary = new GUI({ title: '🏆 Simulation Summary' });
+    this.guiSummary = new GUI({ title: 'Simulation Summary' });
     this.guiSummary.domElement.style.position = 'fixed';
     this.guiSummary.domElement.style.left = '50%';
     this.guiSummary.domElement.style.top = '50%';
     this.guiSummary.domElement.style.transform = 'translate(-50%, -50%)';
-    this.guiSummary.domElement.style.zIndex = '200';
-    
+    this.guiSummary.domElement.style.zIndex = '1000';
+    this.guiSummary.domElement.style.setProperty('--background-color', 'rgba(8, 11, 18, 0.94)');
+
     this.guiSummary.add(this.summaryData, 'pins').name('Pins Down').disable();
     this.guiSummary.add(this.summaryData, 'finalVelocity').name('Final Speed').disable();
     this.guiSummary.add(this.summaryData, 'finalOil').name('Pattern Used').disable();
@@ -105,22 +140,42 @@ export class DOMInterface {
       v0: this.inputs.v0,
       angle: this.inputs.angle,
       revRate: this.inputs.revRate,
-      oilPattern: this.inputs.oilPattern
+      oilPattern: this.inputs.oilPattern,
     };
   }
 
   onLaunch(callback) { this.launchCallback = callback; }
   onReset(callback) { this.resetCallback = callback; }
   onNewFrame(callback) { this.newFrameCallback = callback; }
-
-  triggerLaunch() { 
-    if (this.launchCallback) {
-      this.launchCallback(this.getInputs()); 
-    } 
+  onCameraModeChange(callback) { this.cameraModeCallback = callback; }
+  onRenderSettingsChange(callback) {
+    this.renderSettingsCallback = callback;
+    this.emitRenderSettings();
   }
-  
-  triggerReset() { this.guiSummary.hide(); if (this.resetCallback) this.resetCallback(); }
-  triggerNewFrame() { this.guiSummary.hide(); if (this.newFrameCallback) this.newFrameCallback(); }
+
+  emitRenderSettings() {
+    if (this.renderSettingsCallback) {
+      this.renderSettingsCallback({ ...this.renderSettings });
+    }
+  }
+
+  triggerLaunch() {
+    if (this.launchCallback) this.launchCallback(this.getInputs());
+  }
+
+  triggerReset() {
+    this.guiSummary.hide();
+    if (this.resetCallback) this.resetCallback();
+  }
+
+  triggerNewFrame() {
+    this.guiSummary.hide();
+    if (this.newFrameCallback) this.newFrameCallback();
+  }
+
+  triggerCameraMode(mode) {
+    if (this.cameraModeCallback) this.cameraModeCallback(mode);
+  }
 
   updateHUD(v, w, phase, muK, x, frameCount, oilPatternEnd = 12) {
     this.hudData.speed = `${v.toFixed(2)} m/s`;
@@ -131,7 +186,7 @@ export class DOMInterface {
     this.hudData.frameCount = Math.trunc(frameCount);
     this.hudData.oilPatternEnd = `${oilPatternEnd.toFixed(2)} m`;
 
-    for (let key in this.controllersHUD) {
+    for (const key in this.controllersHUD) {
       this.controllersHUD[key].updateDisplay();
     }
   }
@@ -141,17 +196,11 @@ export class DOMInterface {
     this.summaryData.finalVelocity = `${finalBallVelocity.toFixed(2)} m/s`;
     this.summaryData.finalOil = String(oilPatternName ?? 'Medium');
 
-    this.guiSummary.controllers.forEach(c => c.updateDisplay());
+    this.guiSummary.controllers.forEach((controller) => controller.updateDisplay());
     this.guiSummary.show();
   }
 
   hideSummary() {
     this.guiSummary.hide();
-  }
-
-  triggerCollisionParticles(position3D, createParticlesEmitter) {
-    if (typeof createParticlesEmitter === 'function') {
-      createParticlesEmitter(position3D);
-    }
   }
 }
