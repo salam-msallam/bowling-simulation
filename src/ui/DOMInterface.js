@@ -1,8 +1,8 @@
 // DOMInterface.js
 // المسؤول: العضو 4 
 
-// استيراد lil-gui مباشرة عبر CDN لضمان عدم حدوث شاشة بيضاء بسبب التثبيت
-import GUI from 'https://cdn.jsdelivr.net/npm/lil-gui@0.19/+esm';
+// Use the installed Vite dependency instead of a CDN import.
+import GUI from 'lil-gui';
 
 export class DOMInterface {
   constructor() {

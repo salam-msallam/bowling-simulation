@@ -11,7 +11,7 @@ import BallPhysics from '/src/Physics/BallPhysics.js'
 import { PinPhysics } from '/src/Physics/PinPhysics.js'
 
 // استيراد شغل العضو 4 
-import { DOMInterface } from '/src/ui/DOMInterface.js'
+import { DOMInterface } from '/src/UI/DOMInterface.js'
 import { BallTrail } from '/src/fx/BallTrail.js'
 import { CollisionParticles } from '/src/fx/CollisionParticles.js'
 
@@ -270,7 +270,7 @@ function isSimulationSettled() {
   const ball = ballPhysics.getState()
   const pins = pinPhysics.getStates()
   
-  const ballAtRest = ball.phase === 'stopped' || (ballPhysics.velocity && ballPhysics.velocity.length() <= 0.01)
+  const ballAtRest = ball.phase === 'stopped' || ball.speed <= 0.01
   const pinsAtRest = arePinsAtRest(pins)
 
   if (ballAtRest && pinsAtRest) {
@@ -288,10 +288,9 @@ function showSimulationSummary() {
   summaryShown = true
   isRunning = false
   
-  const finalVel = ballPhysics.velocity ? ballPhysics.velocity.length() : 0;
   ui.showSummary({
     pinsKnockedDown: knockedPinsTracker.filter(Boolean).length,
-    finalBallVelocity: finalVel,
+    finalBallVelocity: ballPhysics.getState().speed,
     oilPatternName: currentOilPattern,
   })
 }
@@ -302,14 +301,7 @@ function resetFrameState() {
   activeTimeouts = []
   knockedPinsTracker = new Array(10).fill(false)
 
-  if (ballPhysics.reset) {
-    ballPhysics.reset()
-  } else {
-    ballPhysics.position.set(0, 0.108, 0)
-    ballPhysics.velocity.set(0, 0, 0)
-    ballPhysics.angularVelocity.set(0, 0, 0)
-    ballPhysics.phase = "sliding"
-  }
+  ballPhysics.reset()
   
   pinPhysics.reset()
   knockDone = false
@@ -341,7 +333,7 @@ function gameLoop(currentTime) {
     if (currentOilPattern === 'Short') patternEnd = 9
     if (currentOilPattern === 'Long') patternEnd = 15
 
-    const currentZ = ballPhysics.position.z
+    const currentZ = ballPhysics.getState().position.z
     const currentMu = currentZ <= patternEnd ? 0.05 : 0.20
 
     ballPhysics.update(dt, currentMu)
@@ -379,6 +371,10 @@ export function launchBall(v0, angle, revRate, oilPattern = 'Medium') {
   isRunning = true
 }
 
+export function stopSimulation() {
+  isRunning = false
+}
+
 export function resetSimulation() {
   currentOilPattern = 'Medium'
   resetFrameState()
@@ -414,7 +410,8 @@ ui.onNewFrame(() => {
 })
 
 function updateSimulationHUD() {
-  const z = ballPhysics.position.z
+  const ball = ballPhysics.getState()
+  const z = ball.position.z
   
   let patternEnd = 12
   if (currentOilPattern === 'Short') patternEnd = 9
@@ -422,10 +419,7 @@ function updateSimulationHUD() {
 
   const muK = z <= patternEnd ? 0.05 : 0.20
   
-  const currentV = ballPhysics.velocity ? ballPhysics.velocity.length() : 0
-  const currentW = ballPhysics.angularVelocity ? ballPhysics.angularVelocity.length() : 0
-
-  ui.updateHUD(currentV, currentW, ballPhysics.phase, muK, z, activeFrameCount, patternEnd)
+  ui.updateHUD(ball.speed, ball.angularSpeed, ball.phase, muK, z, activeFrameCount, patternEnd)
 }
 
 requestAnimationFrame(gameLoop)
