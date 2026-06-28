@@ -1,120 +1,234 @@
-// ================================================
-// PinPhysics.js — النسخة الفيزيائية الحقيقية الكاملة
-// العضو 2 (فيزياء الدبابيس)
-// متوافق مع كود الكرة (Z للأمام) وواجهة العضو 5
-// ================================================
+import * as THREE from 'three';
 
-// مواضع الدبابيس العشرة القياسية متوافقة مع كود الكرة (Z للأمام، X جانبي بالمتر)
+// مواضع الدبابيس القياسية: Z باتجاه نهاية المسار، و X يمين/يسار المسار.
 const INIT_POSITIONS = [
-  { x:  0.000, z: 17.00 },  // 1  الدبوس الأمامي (الرأس)
-  { x: -0.150, z: 17.30 },  // 2  الصف الثاني
-  { x:  0.150, z: 17.30 },  // 3
-  { x: -0.300, z: 17.60 },  // 4  الصف الثالث
-  { x:  0.000, z: 17.60 },  // 5
-  { x:  0.300, z: 17.60 },  // 6
-  { x: -0.450, z: 17.90 },  // 7  الصف الرابع
-  { x: -0.150, z: 17.90 },  // 8
-  { x:  0.150, z: 17.90 },  // 9
-  { x:  0.450, z: 17.90 },  // 10
+  { x: 0.000, z: 17.00 },
+  { x: -0.150, z: 17.30 },
+  { x: 0.150, z: 17.30 },
+  { x: -0.300, z: 17.60 },
+  { x: 0.000, z: 17.60 },
+  { x: 0.300, z: 17.60 },
+  { x: -0.450, z: 17.90 },
+  { x: -0.150, z: 17.90 },
+  { x: 0.150, z: 17.90 },
+  { x: 0.450, z: 17.90 },
 ];
+
+// ثوابت فيزياء الدبوس: ارتفاع الراحة، الجاذبية، نصف القطر التقريبي، ومعاملات التباطؤ.
+const PIN_REST_Y = 0.19;
+const GRAVITY = 9.81;
+const PIN_RADIUS = 0.055;
+const MIN_FALL_SPEED = 0.08;
+const FALLEN_ANGLE = Math.PI / 2;
+const FLOOR_LINEAR_DAMPING = 3.6;
+const FLOOR_SPIN_DAMPING = 4.4;
+const AIR_SPIN_DAMPING = 0.65;
+const TILT_ACCELERATION = 24;
+const TILT_DAMPING = 1.35;
+const REST_LINEAR_EPSILON = 0.025;
+const REST_SPIN_EPSILON = 0.04;
+
+// حاجز خلفي غير مرئي قرب نهاية الـ pit حتى لا تدخل الدبابيس في الحائط الخلفي.
+const PIN_BACK_STOP_Z = 18.85;
+const BACK_STOP_BOUNCE = 0.16;
+const BACK_STOP_DAMPING = 0.42;
+
+// متغيرات مؤقتة يعاد استخدامها كل frame لتقليل إنشاء كائنات جديدة أثناء الحركة.
+const _tiltAxis = new THREE.Vector3();
+const _tiltQuaternion = new THREE.Quaternion();
+const _spinQuaternion = new THREE.Quaternion();
+const _rotationEuler = new THREE.Euler();
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function makePin(index, position) {
+  // حالة الدبوس كاملة: موقع، دوران، سرعة خطية، سرعة دوران، وزوايا السقوط.
+  return {
+    id: index,
+    position: { x: position.x, y: PIN_REST_Y, z: position.z },
+    rotation: { x: 0, y: 0, z: 0 },
+    velocity: { x: 0, y: 0, z: 0 },
+    angularVelocity: { x: 0, y: 0, z: 0 },
+    fallDirection: { x: 0, z: 1 },
+    tiltAngle: 0,
+    tiltVelocity: 0,
+    spinAngle: 0,
+    spinVelocity: 0,
+    targetFallenAngle: FALLEN_ANGLE,
+    visualLift: 0,
+    isStanding: true,
+    isAtRest: false,
+  };
+}
+
+function setFallDirection(pin, linearVelocity, angularVelocity) {
+  // نحدد اتجاه سقوط الدبوس من اتجاه الضربة، حتى يميل بصرياً باتجاه الحركة.
+  const horizontalSpeed = Math.hypot(linearVelocity.x, linearVelocity.z);
+
+  if (horizontalSpeed > MIN_FALL_SPEED) {
+    pin.fallDirection.x = linearVelocity.x / horizontalSpeed;
+    pin.fallDirection.z = linearVelocity.z / horizontalSpeed;
+    return;
+  }
+
+  const angularSpeed = Math.hypot(angularVelocity.x, angularVelocity.z);
+  if (angularSpeed > MIN_FALL_SPEED) {
+    pin.fallDirection.x = -angularVelocity.z / angularSpeed;
+    pin.fallDirection.z = angularVelocity.x / angularSpeed;
+  }
+}
+
+function updatePinRotation(pin) {
+  // الدبوس يبدأ واقفاً على محور Y؛ نميله حول محور عمودي على اتجاه الحركة حتى يسقط بشكل طبيعي.
+  _tiltAxis.set(pin.fallDirection.z, 0, -pin.fallDirection.x).normalize();
+  _tiltQuaternion.setFromAxisAngle(_tiltAxis, pin.tiltAngle);
+  _spinQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), pin.spinAngle);
+  _tiltQuaternion.multiply(_spinQuaternion);
+
+  _rotationEuler.setFromQuaternion(_tiltQuaternion, 'XYZ');
+  pin.rotation.x = _rotationEuler.x;
+  pin.rotation.y = _rotationEuler.y;
+  pin.rotation.z = _rotationEuler.z;
+
+  // عند السقوط الأفقي نرفع النموذج قليلاً حتى لا يغوص جسم الدبوس داخل أرضية المسار.
+  pin.visualLift = PIN_RADIUS * Math.sin(pin.tiltAngle);
+}
+
+function resolveBackStop(pin) {
+  // إذا لم يصل الدبوس إلى نهاية الـ pit فلا نغير حركته.
+  if (pin.position.z <= PIN_BACK_STOP_Z) return;
+
+  // عند تجاوز الحد نعيده للخلف قليلاً ونخفف طاقته كأنه اصطدم بمصد مطاطي خلف الدبابيس.
+  pin.position.z = PIN_BACK_STOP_Z;
+  if (pin.velocity.z > 0) {
+    pin.velocity.z *= -BACK_STOP_BOUNCE;
+  }
+  pin.velocity.x *= BACK_STOP_DAMPING;
+  pin.spinVelocity *= BACK_STOP_DAMPING;
+  pin.tiltVelocity *= BACK_STOP_DAMPING;
+}
 
 export class PinPhysics {
   constructor() {
-    this.mass = 1.53; // الكتلة القياسية للدبوس بالكيلوغرام حسب الدراسة
-    
-    // بناء الدبابيس بناءً على المصفوفة المتوافقة مع كود الكرة والارتفاع المعتمد عند العضو 5
-    this.pins = INIT_POSITIONS.map((p, i) => ({
-      id:         i,
-      position:   { x: p.x, y: 0.19, z: p.z },
-      rotation:   { x: 0, y: 0, z: 0 },
-      velocity:   { x: 0, y: 0, z: 0 },         // السرعة الخطية الحقيقية {x, y, z} بعد الصدم
-      angularVelocity: { x: 0, y: 0, z: 0 },    // السرعة الزاوية الحقيقية بعد الصدم
-      isStanding: true,
-    }));
+    // الكتلة تستخدم في CollisionManager لحساب انتقال الزخم من الكرة إلى الدبابيس.
+    this.mass = 1.53;
+    this.pins = INIT_POSITIONS.map((position, index) => makePin(index, position));
   }
 
-  /**
-   * يُستدعى من CollisionManager عند حدوث تصادم حقيقي
-   * @param {number} id - رقم الدبوس من 0 إلى 9
-   * @param {object} vLinear - السرعة الخطية الناتجة {x, y, z}
-   * @param {object} vAngular - السرعة الزاوية الناتجة {x, y, z}
-   */
   knockPin(id, vLinear = { x: 0, y: 0, z: 5 }, vAngular = { x: 5, y: 0, z: 0 }) {
+    // تستدعى عند تصادم الكرة أو دبوس آخر مع دبوس واقف.
     const pin = this.pins[id];
     if (!pin || !pin.isStanding) return;
-    
+
+    const horizontalSpeed = Math.hypot(vLinear.x, vLinear.z);
+    const angularKick = Math.hypot(vAngular.x, vAngular.z);
+    const directionBias = ((id % 5) - 2) * 0.012;
+
+    // نحول الدبوس من حالة الوقوف إلى حالة الحركة ونخزن طاقة السقوط والدوران.
     pin.isStanding = false;
-    
-    // إسناد السرعات الفيزيائية المحسوبة من لحظة التصادم
+    pin.isAtRest = false;
     pin.velocity = { ...vLinear };
     pin.angularVelocity = { ...vAngular };
+    pin.tiltAngle = 0;
+    pin.tiltVelocity = clamp(horizontalSpeed * 2.1 + angularKick * 0.18, 4.5, 12);
+    pin.spinAngle = 0;
+    pin.spinVelocity = clamp(vLinear.x * 4 + vAngular.y * 0.25, -7, 7);
+    pin.targetFallenAngle = FALLEN_ANGLE + directionBias;
+
+    setFallDirection(pin, vLinear, vAngular);
+    updatePinRotation(pin);
   }
 
-  /**
-   * يُستدعى من main.js (العضو 5) كل frame لتحديث الحركة الفيزيائية
-   * @param {number} dt - فارق الزمن بين الإطارات
-   */
   update(dt) {
-    const gravity = 9.81;
-    const frictionFloor = 0.2; // معامل الاحتكاك للحركة على الأرضية (تأثير التباطؤ)
+    // تحديث حركة كل دبوس ساقط: جاذبية، احتكاك أرضي، سقوط، دوران، ثم استقرار.
+    this.pins.forEach((pin) => {
+      if (pin.isStanding || pin.isAtRest) return;
 
-    this.pins.forEach(pin => {
-      if (pin.isStanding) return; // إذا كان الدبوس واقفاً، لا يتحرك
+      const isOnFloor = pin.position.y <= PIN_REST_Y && pin.velocity.y <= 0;
 
-      // 1. حساب تأثير الجاذبية والاحتكاك على السرعات
-      if (pin.position.y > 0.19) {
-        // إذا كان الدبوس طائراً في الهواء، تتأثر سرعته العمودية بالجاذبية لأسفل
-        pin.velocity.y -= gravity * dt;
+      if (isOnFloor) {
+        // عند ملامسة الأرض نثبت الارتفاع ونبطئ الحركة الأفقية تدريجياً.
+        pin.position.y = PIN_REST_Y;
+        pin.velocity.y = 0;
+
+        const linearDampingFactor = Math.max(0, 1 - FLOOR_LINEAR_DAMPING * dt);
+        pin.velocity.x *= linearDampingFactor;
+        pin.velocity.z *= linearDampingFactor;
       } else {
-        // إذا كان على الأرض، نثبته على مستوى المسار ويطبق عليه الاحتكاك لتخفيض السرعة الأفقية
-        pin.position.y = 0.19;
-        pin.velocity.y = Math.max(0, pin.velocity.y);
-        
-        // تطبيق التباطؤ الخطي بسبب الاحتكاك مع أرضية الصالة
-        pin.velocity.x *= Math.max(0, 1 - frictionFloor * dt * 5);
-        pin.velocity.z *= Math.max(0, 1 - frictionFloor * dt * 5);
+        // في الهواء يتأثر الدبوس بالجاذبية فقط قبل أن يعود للأرض.
+        pin.velocity.y -= GRAVITY * dt;
       }
 
-      // 2. تحديث المواضع (المعادلات الانتقالية: x += v * dt)
+      // تحديث الموقع من السرعة الحالية، ثم تطبيق حاجز الحائط الخلفي.
       pin.position.x += pin.velocity.x * dt;
       pin.position.y += pin.velocity.y * dt;
       pin.position.z += pin.velocity.z * dt;
+      resolveBackStop(pin);
 
-      // قيد أمان لمنع اختراق الدبوس لأسفل المسار
-      if (pin.position.y < 0.05) {
-        pin.position.y = 0.05;
+      if (pin.position.y <= PIN_REST_Y && pin.velocity.y <= 0) {
+        pin.position.y = PIN_REST_Y;
         pin.velocity.y = 0;
       }
 
-      // 3. تحديث الدوران بناءً على السرعة الزاوية (المعادلات الدورانية)
-      pin.rotation.x += pin.angularVelocity.x * dt;
-      pin.rotation.y += pin.angularVelocity.y * dt;
-      pin.rotation.z += pin.angularVelocity.z * dt;
+      const tiltRemaining = pin.targetFallenAngle - pin.tiltAngle;
+      if (tiltRemaining > 0) {
+        // عزم السقوط يزيد الميل تدريجياً، والتخميد يمنع دوراناً مبالغاً فيه بعد أن يصبح الدبوس شبه أفقي.
+        const torqueScale = Math.max(0.25, Math.sin(Math.max(pin.tiltAngle, 0.15)));
+        pin.tiltVelocity += TILT_ACCELERATION * torqueScale * dt;
+        pin.tiltVelocity *= Math.max(0, 1 - TILT_DAMPING * dt);
+        pin.tiltAngle = Math.min(pin.targetFallenAngle, pin.tiltAngle + pin.tiltVelocity * dt);
+      } else {
+        pin.tiltAngle = pin.targetFallenAngle;
+        pin.tiltVelocity = 0;
+      }
+
+      const spinDamping = isOnFloor ? FLOOR_SPIN_DAMPING : AIR_SPIN_DAMPING;
+      // الدوران يتباطأ أسرع على الأرض بسبب الاحتكاك، وأبطأ في الهواء.
+      pin.spinVelocity *= Math.max(0, 1 - spinDamping * dt);
+      pin.spinAngle += pin.spinVelocity * dt;
+
+      pin.angularVelocity.x = pin.tiltVelocity * pin.fallDirection.z;
+      pin.angularVelocity.y = pin.spinVelocity;
+      pin.angularVelocity.z = -pin.tiltVelocity * pin.fallDirection.x;
+
+      updatePinRotation(pin);
+
+      const linearSpeed = Math.hypot(pin.velocity.x, pin.velocity.y, pin.velocity.z);
+      const tiltSettled = pin.tiltAngle >= pin.targetFallenAngle - 0.001;
+      const spinSettled = Math.abs(pin.spinVelocity) < REST_SPIN_EPSILON;
+
+      if (pin.position.y === PIN_REST_Y && tiltSettled && spinSettled && linearSpeed < REST_LINEAR_EPSILON) {
+        // عندما تصبح الحركة صغيرة جداً نعتبر الدبوس مستقراً حتى لا يستمر بحسابات صغيرة بلا فائدة.
+        pin.velocity = { x: 0, y: 0, z: 0 };
+        pin.angularVelocity = { x: 0, y: 0, z: 0 };
+        pin.tiltVelocity = 0;
+        pin.spinVelocity = 0;
+        pin.tiltAngle = pin.targetFallenAngle;
+        pin.position.y = PIN_REST_Y;
+        pin.isAtRest = true;
+        updatePinRotation(pin);
+      }
     });
   }
 
-  /**
-   * الواجهة الرسمية التي يقرأ منها العضو 5 لتحديث الـ Meshes في Three.js
-   */
   getStates() {
-    return this.pins.map(p => ({
-      id:         p.id,
-      position:   { ...p.position },
-      rotation:   { ...p.rotation },
-      isStanding: p.isStanding,
+    // main.js يقرأ نسخة مبسطة فقط من حالة الدبابيس لمزامنة النماذج المرئية.
+    return this.pins.map((pin) => ({
+      id: pin.id,
+      position: { ...pin.position },
+      rotation: { ...pin.rotation },
+      isStanding: pin.isStanding,
+      isAtRest: pin.isAtRest,
+      visualLift: pin.visualLift,
     }));
   }
 
-  /**
-   * إعادة تعيين الدبابيس لمواضعها الأصلية عند بدء رمية جديدة
-   */
   reset() {
-    this.pins.forEach((pin, i) => {
-      pin.position   = { x: INIT_POSITIONS[i].x, y: 0.19, z: INIT_POSITIONS[i].z };
-      pin.rotation   = { x: 0, y: 0, z: 0 };
-      pin.velocity   = { x: 0, y: 0, z: 0 };
-      pin.angularVelocity = { x: 0, y: 0, z: 0 };
-      pin.isStanding = true;
+    // إعادة كل دبوس إلى مكانه وحالته الأصلية عند بدء رمية أو إطار جديد.
+    this.pins.forEach((pin, index) => {
+      Object.assign(pin, makePin(index, INIT_POSITIONS[index]));
     });
   }
 }
