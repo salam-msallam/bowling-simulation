@@ -11,6 +11,13 @@
 
 import * as THREE from 'three';
 
+// ============================================================
+// مسؤولية العضو 4: توليد الخامات برمجيًا
+// هذا الملف يحول رسومات Canvas إلى THREE.CanvasTexture لاستخدامها على المسار.
+// المستخدم حاليًا في createMaterials.js: generateWoodTexture و generateNormalMap.
+// generateOilPatternTexture و generateDryZoneTexture دوال مساعدة قديمة وغير مربوطة حالياً بالتطبيق.
+// ============================================================
+
 /**
  * Generate a procedural wood grain texture using canvas
  * Simulates natural wood with directional grain
@@ -21,6 +28,8 @@ import * as THREE from 'three';
  * @returns {THREE.CanvasTexture} Wood texture ready for material
  */
 export function generateWoodTexture(width = 512, height = 128, options = {}) {
+  // ينشئ خامة خشب إجرائية بالاعتماد على موجات بسيطة داخل Canvas.
+  // ركز هنا إذا أردت تغيير لون الخشب أو اتجاه الحبيبات على المسار.
   const {
     baseColor = { r: 200, g: 169, b: 110 },      // Tan wood base
     darkColor = { r: 140, g: 100, b: 60 },       // Dark grain
@@ -34,43 +43,42 @@ export function generateWoodTexture(width = 512, height = 128, options = {}) {
   
   const ctx = canvas.getContext('2d');
   
-  // Fill base color
+  // نملأ الخلفية باللون الأساسي للخشب قبل إضافة الحبيبات.
   ctx.fillStyle = `rgb(${baseColor.r}, ${baseColor.g}, ${baseColor.b})`;
   ctx.fillRect(0, 0, width, height);
 
-  // Get image data for pixel manipulation
+  // نقرأ بيانات البكسلات حتى نغير كل بكسل ونرسم شكل الحبيبات.
   const imageData = ctx.getImageData(0, 0, width, height);
   const data = imageData.data;
 
-  // Perlin-like noise using sine waves for grain effect
-  // Multiple octaves create natural looking wood
+  // نستخدم عدة موجات sine كتقريب بسيط لحبيبات الخشب بدل استخدام مكتبة noise.
+  // تعدد الترددات يعطي تفاصيل أكثر طبيعية.
   for (let i = 0; i < data.length; i += 4) {
     const pixelIndex = i / 4;
     const x = pixelIndex % width;
     const y = Math.floor(pixelIndex / width);
 
-    // Normalize coordinates
+    // نحول الإحداثيات إلى مجال 0..1 حتى تبقى النتيجة مستقرة مع أي حجم Canvas.
     const nx = x / width;
     const ny = y / height;
 
-    // Multiple sine waves for grain pattern
-    // Primarily horizontal (along the lane direction)
+    // موجات متعددة باتجاه طول المسار لتقليد خطوط الخشب.
     const grain1 = Math.sin(ny * Math.PI * 8 * grainScale) * 0.5 + 0.5;
     const grain2 = Math.sin(ny * Math.PI * 3 * grainScale + nx * Math.PI * 2) * 0.3 + 0.7;
     const grain3 = Math.sin(ny * Math.PI * 24 * grainScale + Math.random() * 0.1) * 0.2 + 0.8;
 
-    // Combine grain patterns
+    // دمج الموجات ينتج تبايناً بين المناطق الفاتحة والداكنة.
     const grainValue = grain1 * grain2 * grain3;
 
-    // Create variation between dark and light
+    // variance يحدد مقدار اقتراب البكسل من اللون الغامق أو الفاتح.
     const variance = grainValue;
 
-    // Interpolate between colors based on grain
+    // نخلط بين اللون الأساسي واللون الغامق حسب قيمة الحبيبات.
     const r = Math.floor(baseColor.r + (darkColor.r - baseColor.r) * (1 - variance) * 0.6);
     const g = Math.floor(baseColor.g + (darkColor.g - baseColor.g) * (1 - variance) * 0.6);
     const b = Math.floor(baseColor.b + (darkColor.b - baseColor.b) * (1 - variance) * 0.6);
 
-    // Apply to canvas
+    // نكتب اللون الجديد داخل بيانات الصورة.
     data[i] = r;        // R
     data[i + 1] = g;    // G
     data[i + 2] = b;    // B
@@ -79,14 +87,14 @@ export function generateWoodTexture(width = 512, height = 128, options = {}) {
 
   ctx.putImageData(imageData, 0, 0);
 
-  // Create Three.js texture
+  // نحول Canvas إلى Texture يمكن وضعها على خامة Three.js.
   const texture = new THREE.CanvasTexture(canvas);
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
   texture.magFilter = THREE.LinearFilter;
   texture.minFilter = THREE.LinearMipMapLinearFilter;
   
-  // Optimize: Only use necessary properties
+  // نخبر Three.js أن بيانات الخامة تغيرت وتحتاج رفعاً للـ GPU.
   texture.needsUpdate = true;
 
   return texture;
@@ -101,34 +109,35 @@ export function generateWoodTexture(width = 512, height = 128, options = {}) {
  * @returns {THREE.CanvasTexture} Oil pattern texture
  */
 export function generateOilPatternTexture(width = 256, height = 256) {
+  // ينشئ خامة مساعدة قديمة لمنطقة الزيت: لون خشبي مع لمعان وخطوط خفيفة.
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
   
   const ctx = canvas.getContext('2d');
 
-  // Base tan color
+  // لون أساس قريب من خشب المسار.
   ctx.fillStyle = 'rgb(200, 169, 110)';
   ctx.fillRect(0, 0, width, height);
 
-  // Get image data
+  // نقرأ البكسلات لتعديلها وإضافة تأثير الزيت.
   const imageData = ctx.getImageData(0, 0, width, height);
   const data = imageData.data;
 
-  // Create subtle oil sheen pattern with slight variations
+  // نمط زيت خفيف: خطوط أفقية وتباين بسيط حتى لا تبدو الخامة مسطحة.
   for (let i = 0; i < data.length; i += 4) {
     const pixelIndex = i / 4;
     const x = pixelIndex % width;
     const y = Math.floor(pixelIndex / width);
 
-    // Normalize
+    // إحداثيات طبيعية 0..1 لتسهيل حساب النمط.
     const nx = x / width;
     const ny = y / height;
 
-    // Subtle horizontal stripes (oil pattern lines)
+    // خطوط زيت خفيفة باتجاه عرض الصورة.
     const stripes = Math.sin(ny * Math.PI * 4) * 0.15 + 1.0;
 
-    // Very subtle variation
+    // تباين بسيط يكسر التكرار المنتظم.
     const variation = Math.sin(nx * Math.PI * 2 + ny * Math.PI) * 0.05;
 
     const multiplier = stripes + variation;
@@ -160,31 +169,32 @@ export function generateOilPatternTexture(width = 256, height = 256) {
  * @returns {THREE.CanvasTexture} Dry zone texture
  */
 export function generateDryZoneTexture(width = 256, height = 256) {
+  // ينشئ خامة مساعدة قديمة للمنطقة الجافة: أغمق وأخشن بصرياً من منطقة الزيت.
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
   
   const ctx = canvas.getContext('2d');
 
-  // Darker base for dry zone
+  // لون أساس أغمق لتمييز المنطقة الجافة.
   ctx.fillStyle = 'rgb(184, 147, 110)';
   ctx.fillRect(0, 0, width, height);
 
-  // Get image data
+  // نقرأ البكسلات لإضافة خشونة وتفاصيل.
   const imageData = ctx.getImageData(0, 0, width, height);
   const data = imageData.data;
 
-  // Create more pronounced roughness pattern
+  // تفاصيل أكثر وضوحاً من منطقة الزيت حتى تبدو أقل لمعاناً.
   for (let i = 0; i < data.length; i += 4) {
     const pixelIndex = i / 4;
     const x = pixelIndex % width;
     const y = Math.floor(pixelIndex / width);
 
-    // Normalize
+    // إحداثيات طبيعية 0..1.
     const nx = x / width;
     const ny = y / height;
 
-    // Multiple grain frequencies for roughness
+    // ترددات متعددة تعطي إحساس خشونة وتفاوت في السطح.
     const detail1 = Math.sin(ny * Math.PI * 6) * 0.3;
     const detail2 = Math.sin(nx * Math.PI * 8 + ny * Math.PI * 4) * 0.2;
     const detail3 = Math.sin(ny * Math.PI * 16) * 0.15;
@@ -219,37 +229,38 @@ export function generateDryZoneTexture(width = 256, height = 256) {
  * @returns {THREE.CanvasTexture} Normal map texture
  */
 export function generateNormalMap(width = 256, height = 256) {
+  // ينشئ normal map بسيط يعطي إحساس عمق لحبيبات الخشب بدون زيادة geometry.
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
   
   const ctx = canvas.getContext('2d');
 
-  // Start with neutral normal (0.5, 0.5, 1.0) = blue
+  // نبدأ بلون normal محايد: أزرق يعني السطح باتجاه الأعلى.
   ctx.fillStyle = 'rgb(128, 128, 255)';
   ctx.fillRect(0, 0, width, height);
 
-  // Get image data
+  // نقرأ البكسلات لتعديل اتجاه normal لكل بكسل.
   const imageData = ctx.getImageData(0, 0, width, height);
   const data = imageData.data;
 
-  // Create subtle normal variations for wood grain effect
+  // نضيف تغيرات خفيفة تجعل الضوء يتفاعل مع الخشب وكأن فيه حبيبات.
   for (let i = 0; i < data.length; i += 4) {
     const pixelIndex = i / 4;
     const x = pixelIndex % width;
     const y = Math.floor(pixelIndex / width);
 
-    // Normalize
+    // نستخدم المحور Y لتوجيه الحبيبات بشكل طولي.
     const ny = y / height;
 
-    // Subtle grain direction (primarily along Y)
+    // اهتزاز خفيف في normal لمحاكاة بروز الحبيبات.
     const grainBump = Math.sin(ny * Math.PI * 8) * 0.3;
 
-    // X normal (red channel) - follows grain direction
+    // قناة X في normal map.
     const nx = 128 + grainBump * 20;
-    // Y normal (green channel) - minimal
+    // قناة Y بتغير قليل حتى لا يصبح السطح مبالغاً فيه.
     const ny_norm = 128 + Math.sin(ny * Math.PI * 16) * 10;
-    // Z normal (blue channel) - mostly up
+    // قناة Z تبقى عالية لأن السطح شبه مستو.
     const nz = 255 - Math.abs(grainBump) * 30;
 
     data[i] = Math.max(0, Math.min(255, Math.floor(nx)));          // R

@@ -1,34 +1,42 @@
+// ============================================================
+// مسؤولية العضو 2: فيزياء منطقة الزيت
+// ركز هنا إذا كنت مسؤولاً عن: أنماط الزيت، نهاية منطقة الزيت، وكيف يتغير الاحتكاك مع تقدم الكرة.
+// الملفات المرتبطة التي يجب فهمها معه: BallPhysics.js لأنه يستخدم mu، وDOMInterface.js لأنه يرسل اسم النمط المختار.
+// ============================================================
+
 class OilZone {
-  constructor(muMin, muMax, Loil) {
-    this.muMin = muMin; // أقل احتكاك — عند بداية المسار (زيت كتير)
-    this.muMax = muMax; // أكبر احتكاك — بعد الزيت (بدون زيت)
-    this.Loil = Loil; // طول منطقة الزيت بالمتر
+  constructor({ oilLength, muMin, muMax }) {
+    // oilLength طول الزيت بالمتر، وmuMin/muMax أقل وأعلى احتكاك داخل النمط.
+    this.oilLength = oilLength
+    this.muMin = muMin
+    this.muMax = muMax
   }
 
-  // بنبني OilZone من preset جاهز
-  static fromPreset(preset) {
-    const p = OilZone.presets[preset];
-    return new OilZone(p.muMin, p.muMax, p.Loil);
+  static fromPreset(preset = 'Medium') {
+    // يحول اسم النمط القادم من الواجهة إلى كائن OilZone جاهز للاستخدام.
+    // إذا وصل اسم غير معروف نرجع إلى Medium حتى تبقى المحاكاة مستقرة.
+    const settings = OilZone.presets[preset] ?? OilZone.presets.Medium
+    return new OilZone(settings)
   }
 
-  getMu(x) {
-    // لو الكرة طلعت من منطقة الزيت — muMax ثابت
-    if (x >= this.Loil) return this.muMax;
-    // μ(x) = μmin + (μmax - μmin)·(x/Loil)
-    // يعني الاحتكاك بيزيد تدريجياً كلما تقدمت الكرة
-    return this.muMin + (this.muMax - this.muMin) * (x / this.Loil);
+  getOilEnd() {
+    // يستخدمه HUD لعرض مكان نهاية الزيت للمستخدم.
+    return this.oilLength
+  }
+
+  getMu(distance) {
+    // يحسب معامل الاحتكاك حسب موقع الكرة على محور Z.
+    // في بداية الزيت يكون الاحتكاك قريباً من muMin، وعند النهاية يصل تدريجياً إلى muMax.
+    const progress = Math.min(Math.max(distance / this.oilLength, 0), 1)
+    return this.muMin + (this.muMax - this.muMin) * progress
   }
 }
 
-// 3 أنماط جاهزة
+// أنماط الزيت المتاحة في واجهة التحكم. القيم بالمتر وتؤثر مباشرة على hook وسرعة التوقف.
 OilZone.presets = {
-  Short: { Loil: 32, muMin: 0.02, muMax: 0.2 },
-  Medium: { Loil: 40, muMin: 0.03, muMax: 0.18 },
-  Long: { Loil: 48, muMin: 0.04, muMax: 0.15 },
-};
+  Short: { oilLength: 9, muMin: 0.035, muMax: 0.20 },
+  Medium: { oilLength: 12, muMin: 0.05, muMax: 0.20 },
+  Long: { oilLength: 15, muMin: 0.065, muMax: 0.20 },
+}
 
-export default OilZone;
-
-// عند بداية المسار x=0 ← احتكاك = muMin (زيت كتير)
-// كلما تقدمت ← احتكاك يزيد تدريجياً
-// عند نهاية الزيت x=Loil ← احتكاك = muMax (بدون زيت)
+export default OilZone

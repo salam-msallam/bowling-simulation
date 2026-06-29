@@ -1,117 +1,110 @@
-// ================================================
-// CollisionManager.js — النسخة المحدثة
-// العضو 2 (فيزياء الدبابيس)
-// متوافق تماماً مع كود الكرة (Z للأمام) ونظام الـ OilZone
-// ================================================
+import * as THREE from 'three'
 
-import * as THREE from "three";
+// ============================================================
+// مسؤولية العضو 3: التصادمات
+// ركز هنا إذا كنت مسؤولاً عن: متى تضرب الكرة الدبابيس، كيف ينتقل الزخم، وتأثير الدومينو بين الدبابيس.
+// الملفات المرتبطة التي يجب فهمها معه: BallPhysics.js لحالة الكرة، وPinPhysics.js لإسقاط الدبابيس وتحديثها.
+// ============================================================
 
 export class CollisionManager {
-  /**
-   * @param {BallPhysics} ball - كائن الكرة من رفيقتك (عضو 1)
-   * @param {PinPhysics} pinManager - كائن إدارة الدبابيس تبعك (عضو 2)
-   */
   constructor(ball, pinManager) {
-    this.ball = ball;
-    this.pinManager = pinManager;
-    
-    // الأبعاد القياسية بالمتر
-    this.ballRadius = 0.108;       // نصف قطر الكرة
-    this.pinRadius = 0.06;         // نصف قطر الدبوس
-    this.collisionThreshold = this.ballRadius + this.pinRadius; // مسافة التماس (0.168 متر)
+    // يحتفظ بمراجع الفيزياء فقط، ولا ينشئ Mesh أو عناصر مرئية.
+    this.ball = ball
+    this.pinManager = pinManager
+
+    // أبعاد تقريبية بالمتر تستخدم لحساب مسافة التماس بين الكرة والدبوس.
+    this.ballRadius = 0.108
+    this.pinRadius = 0.06
+    this.collisionThreshold = this.ballRadius + this.pinRadius
   }
 
-  // يُستدعى في الـ main loop كل frame
   checkCollisions() {
-    // 1. فحص تصادم الكرة مع الدبابيس الواقفة
-    this.pinManager.pins.forEach(pin => {
-      if (!pin.isStanding) return;
+    // يستدعى كل frame من createSimulationController بعد تحديث فيزياء الكرة والدبابيس.
+    this.pinManager.pins.forEach((pin) => {
+      if (!pin.isStanding) return
 
-      // حساب المسافة بين مركز الكرة والدبوس (Z للأمام، X جانبي)
-      const dx = this.ball.position.x - pin.position.x;
-      const dz = this.ball.position.z - pin.position.z;
-      const distance = Math.sqrt(dx * dx + dz * dz);
+      // نحسب المسافة أفقياً فقط لأن التصادم الأساسي يحدث على أرضية المسار بين X و Z.
+      const dx = this.ball.position.x - pin.position.x
+      const dz = this.ball.position.z - pin.position.z
+      const distance = Math.sqrt(dx * dx + dz * dz)
 
-      // إذا حدث تصادم
       if (distance <= this.collisionThreshold) {
-        this.handleBallPinCollision(pin, dx, dz);
+        this.handleBallPinCollision(pin, dx, dz)
       }
-    });
+    })
 
-    // 2. فحص تصادم الدبابيس مع بعضها (تأثير الدومينو)
-    this.checkPinToPinCollisions();
+    // بعد تصادم الكرة، نفحص هل دبوس متحرك ضرب دبوساً واقفاً.
+    this.checkPinToPinCollisions()
   }
 
-  /**
-   * معالجة تصادم الكرة مع دبوس
-   */
   handleBallPinCollision(pin, dx, dz) {
-    const angle = Math.atan2(dx, dz);
+    // يحول تصادم الكرة مع دبوس إلى سرعة خطية وزاوية للدبوس، ثم يقلل سرعة الكرة.
+    const angle = Math.atan2(dx, dz)
 
-    const mBall = this.ball.mass;
-    const mPin = this.pinManager.mass;
+    const mBall = this.ball.mass
+    const mPin = this.pinManager.mass
 
-    // سرعات الكرة قبل التصادم
-    const vBallX_init = this.ball.velocity.x;
-    const vBallZ_init = this.ball.velocity.z;
+    const vBallXInit = this.ball.velocity.x
+    const vBallZInit = this.ball.velocity.z
 
-    const cr = 0.7; // معامل الارتداد
+    // معامل الارتداد يحدد مقدار الطاقة التي تبقى بعد التصادم.
+    const cr = 0.7
 
-    // حساب سرعة اندفاع الدبوس بناءً على حفظ الزخم الخطي
-    const vPinX = vBallX_init * (1 + cr) * (mBall / (mBall + mPin)) * Math.sin(angle);
-    const vPinZ = vBallZ_init * (1 + cr) * (mBall / (mBall + mPin)) * Math.cos(angle);
-    const vPinY = Math.sqrt(vPinX * vPinX + vPinZ * vPinZ) * 0.4; // حركة طيران عمودية خفيفة
+    // نحسب دفعة الدبوس حسب اتجاه التصادم وحفظ الزخم التقريبي.
+    const vPinX = vBallXInit * (1 + cr) * (mBall / (mBall + mPin)) * Math.sin(angle)
+    const vPinZ = vBallZInit * (1 + cr) * (mBall / (mBall + mPin)) * Math.cos(angle)
+    const vPinY = Math.sqrt(vPinX * vPinX + vPinZ * vPinZ) * 0.4
 
-    // السرعة الزاوية للدبوس
+    // السرعة الزاوية تعطي الدبوس ميلاناً ودوراناً بصرياً عند السقوط.
     const vPinAngular = {
       x: vPinZ * 4,
       y: 0,
-      z: -vPinX * 4
-    };
+      z: -vPinX * 4,
+    }
 
-    // إسقاط الدبوس
-    this.pinManager.knockPin(pin.id, { x: vPinX, y: vPinY, z: vPinZ }, vPinAngular);
+    this.pinManager.knockPin(pin.id, { x: vPinX, y: vPinY, z: vPinZ }, vPinAngular)
 
-    // الـ Deflection: رد فعل الصدمة على الكرة (انحرافها وفقدان جزء من سرعتها)
-    this.ball.velocity.x = vBallX_init - (mPin / mBall) * vPinX;
-    this.ball.velocity.z = vBallZ_init - (mPin / mBall) * vPinZ;
+    // رد فعل التصادم على الكرة: تنحرف وتفقد جزءاً من سرعتها.
+    this.ball.velocity.x = vBallXInit - (mPin / mBall) * vPinX
+    this.ball.velocity.z = vBallZInit - (mPin / mBall) * vPinZ
   }
 
-  /**
-   * تصادم الدبابيس المتطايرة مع الدبابيس الساكنة
-   */
   checkPinToPinCollisions() {
-    const pins = this.pinManager.pins;
-    const pinPinThreshold = this.pinRadius * 2; // 0.12 متر
+    // يفحص كل زوج من الدبابيس لتفعيل تأثير الدومينو بين دبوس متحرك ودبوس واقف.
+    const pins = this.pinManager.pins
+    const pinPinThreshold = this.pinRadius * 2
 
-    for (let i = 0; i < pins.length; i++) {
-      for (let j = i + 1; j < pins.length; j++) {
-        const p1 = pins[i];
-        const p2 = pins[j];
+    for (let i = 0; i < pins.length; i += 1) {
+      for (let j = i + 1; j < pins.length; j += 1) {
+        const p1 = pins[i]
+        const p2 = pins[j]
 
-        if (p1.isStanding && p2.isStanding) continue;
-        if (!p1.isStanding && !p2.isStanding) continue;
+        // لا نحتاج معالجة زوج كلاهما واقف أو كلاهما ساقط.
+        if (p1.isStanding && p2.isStanding) continue
+        if (!p1.isStanding && !p2.isStanding) continue
 
-        const dx = p1.position.x - p2.position.x;
-        const dz = p1.position.z - p2.position.z;
-        const distance = Math.sqrt(dx * dx + dz * dz);
+        const dx = p1.position.x - p2.position.x
+        const dz = p1.position.z - p2.position.z
+        const distance = Math.sqrt(dx * dx + dz * dz)
 
         if (distance <= pinPinThreshold) {
-          const movingPin = p1.isStanding ? p2 : p1;
-          const standingPin = p1.isStanding ? p1 : p2;
+          const movingPin = p1.isStanding ? p2 : p1
+          const standingPin = p1.isStanding ? p1 : p2
 
-          const vX = movingPin.velocity.x * 0.5;
-          const vZ = movingPin.velocity.z * 0.5;
-          const vY = Math.abs(vX) * 0.3;
+          // ننقل نصف سرعة الدبوس المتحرك للدبوس الواقف حتى لا يصبح التأثير مبالغاً فيه.
+          const vX = movingPin.velocity.x * 0.5
+          const vZ = movingPin.velocity.z * 0.5
+          const vY = Math.abs(vX) * 0.3
 
           this.pinManager.knockPin(
-            standingPin.id, 
-            { x: vX, y: vY, z: vZ }, 
+            standingPin.id,
+            { x: vX, y: vY, z: vZ },
             { x: vZ * 3, y: 0, z: -vX * 3 }
-          );
-          
-          movingPin.velocity.x *= 0.5;
-          movingPin.velocity.z *= 0.5;
+          )
+
+          // بعد نقل جزء من الطاقة نخفف حركة الدبوس المتحرك.
+          movingPin.velocity.x *= 0.5
+          movingPin.velocity.z *= 0.5
         }
       }
     }
