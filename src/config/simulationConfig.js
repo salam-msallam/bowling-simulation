@@ -12,7 +12,13 @@ export const SUMMARY_FALLBACK_FRAME_DELAY = 120
 export const PIN_REST_EPSILON = 0.0005
 export const BALL_MASS = 6.0
 export const BALL_RADIUS = 0.108
-export const BALL_START_POS = new THREE.Vector3(0, BALL_RADIUS, 0)
+export const LANE_SURFACE_Y = 0.03
+export const BALL_LANE_Y = BALL_RADIUS + LANE_SURFACE_Y
+export const BALL_START_POS = new THREE.Vector3(0, BALL_LANE_Y, 0)
+export const LANE_PLAYABLE_HALF_WIDTH = 0.525
+export const GUTTER_CENTER_X = 0.68
+export const GUTTER_WIDTH = 0.2
+export const BALL_GUTTER_Y = BALL_RADIUS * 0.95
 export const PIN_VISUAL_HEIGHT = 0.38
 export const PIN_VISUAL_FLOOR_OFFSET = 0.055
 export const LANE_END_Z = 18.5
@@ -49,7 +55,6 @@ export const PIN_END_DESIGN = {
     width: 1.82,
     depth: 1.76,
     centerZ: 18.08,
-    floorY: 0.052,
     frameZ: 18.88,
     frameY: 0.6,
     frameWidth: 2.04,

@@ -68,7 +68,7 @@ export function createSimulationController({
   function syncBall() {
     // ينسخ حالة الكرة الفيزيائية إلى المجسم المرئي.
     const state = ballPhysics.getState()
-    models.ballMesh.position.set(state.position.x, BALL_RADIUS, state.position.z)
+    models.ballMesh.position.set(state.position.x, state.position.y, state.position.z)
     models.ballVisualRoot.rotation.copy(state.rotation)
   }
 
@@ -91,6 +91,8 @@ export function createSimulationController({
 
   function checkCollisions() {
     // يفحص التصادمات ثم يشغل صوت سقوط الدبوس عند تغير حالته من واقف إلى ساقط.
+    if (ballPhysics.getState().phase === 'gutter') return
+
     const beforeStates = pinPhysics.getStates()
     collisionManager.checkCollisions()
     const afterStates = pinPhysics.getStates()

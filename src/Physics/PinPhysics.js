@@ -24,6 +24,8 @@ const INIT_POSITIONS = [
 const PIN_REST_Y = 0.19
 const GRAVITY = 9.81
 const PIN_RADIUS = 0.055
+const PIN_STANDING_COLLISION_RADIUS = 0.075
+const PIN_FALLEN_COLLISION_RADIUS = 0.13
 const MIN_FALL_SPEED = 0.08
 const FALLEN_ANGLE = Math.PI / 2
 const FLOOR_LINEAR_DAMPING = 3.6
@@ -116,6 +118,69 @@ function resolveBackStop(pin) {
   pin.velocity.x *= BACK_STOP_DAMPING
   pin.spinVelocity *= BACK_STOP_DAMPING
   pin.tiltVelocity *= BACK_STOP_DAMPING
+}
+
+function getPinCollisionRadius(pin) {
+  return pin.isStanding ? PIN_STANDING_COLLISION_RADIUS : PIN_FALLEN_COLLISION_RADIUS
+}
+
+function getPinMobility(pin) {
+  return pin.isStanding ? 0 : 1
+}
+
+function resolvePinToPinOverlaps(pins) {
+  for (let pass = 0; pass < 3; pass += 1) {
+    for (let i = 0; i < pins.length; i += 1) {
+      for (let j = i + 1; j < pins.length; j += 1) {
+        const a = pins[i]
+        const b = pins[j]
+
+        if (a.isStanding && b.isStanding) continue
+
+        const dx = b.position.x - a.position.x
+        const dz = b.position.z - a.position.z
+        const distance = Math.hypot(dx, dz)
+        const minDistance = getPinCollisionRadius(a) + getPinCollisionRadius(b)
+
+        if (distance >= minDistance) continue
+
+        const nx = distance > 0.0001 ? dx / distance : 1
+        const nz = distance > 0.0001 ? dz / distance : 0
+        const overlap = minDistance - distance
+        const mobilityA = getPinMobility(a)
+        const mobilityB = getPinMobility(b)
+        const totalMobility = mobilityA + mobilityB
+
+        if (totalMobility <= 0) continue
+
+        const moveA = (overlap * mobilityA) / totalMobility
+        const moveB = (overlap * mobilityB) / totalMobility
+
+        a.position.x -= nx * moveA
+        a.position.z -= nz * moveA
+        b.position.x += nx * moveB
+        b.position.z += nz * moveB
+
+        const relativeVelocityX = b.velocity.x - a.velocity.x
+        const relativeVelocityZ = b.velocity.z - a.velocity.z
+        const closingSpeed = relativeVelocityX * nx + relativeVelocityZ * nz
+
+        if (closingSpeed < 0) {
+          const impulse = -closingSpeed * 0.35
+          if (mobilityA > 0) {
+            a.velocity.x -= nx * impulse
+            a.velocity.z -= nz * impulse
+            a.isAtRest = false
+          }
+          if (mobilityB > 0) {
+            b.velocity.x += nx * impulse
+            b.velocity.z += nz * impulse
+            b.isAtRest = false
+          }
+        }
+      }
+    }
+  }
 }
 
 export class PinPhysics {
@@ -219,6 +284,8 @@ export class PinPhysics {
         updatePinRotation(pin)
       }
     })
+
+    resolvePinToPinOverlaps(this.pins)
   }
 
   getStates() {
