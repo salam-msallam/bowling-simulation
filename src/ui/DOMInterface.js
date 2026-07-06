@@ -41,7 +41,7 @@ export class DOMInterface {
       speed: "0.00 m/s",
       angularVelocity: "0.00 rad/s",
       phase: "idle",
-      friction: "0.05",
+      friction: "",
       displacement: "0.00 m",
       oilPatternEnd: "12.00 m",
       frameCount: 0,

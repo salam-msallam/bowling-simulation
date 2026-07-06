@@ -103,7 +103,7 @@ class BallPhysics {
       angularSpeed: this.angularVelocity.length(),
     };
   }
-
+  sliding;
   reset() {
     // يرجع الكرة إلى وضع الانتظار ويصفر كل السرعات والدوران.
     this.position.copy(this.startPosition);

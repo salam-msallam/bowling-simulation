@@ -218,6 +218,7 @@ export function createSimulationController({
     const z = ball.position.z;
     const patternEnd = currentOilZone.getOilEnd();
     const muK = getCurrentFriction(z);
+    const force = muK * BALL_MASS * ballPhysics.g; // القوة = معامل * كتلة * جاذبية
     // أضيفي هذا السطر داخل دالة updateSimulationHUD في createSimulationController.js
     console.log(
       "الجاذبية الحالية تؤثر على الاحتكاك بقوة:",
@@ -227,6 +228,7 @@ export function createSimulationController({
       ball.speed,
       ball.angularSpeed,
       ball.phase,
+      force,
       muK,
       z,
       activeFrameCount,

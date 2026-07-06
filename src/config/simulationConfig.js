@@ -9,7 +9,7 @@ import * as THREE from "three";
 // ثوابت المحاكاة المركزية حتى لا تتكرر الأرقام داخل ملفات المشهد والفيزياء.
 export const SETTLE_FRAME_DELAY = 45;
 export const SUMMARY_FALLBACK_FRAME_DELAY = 120;
-export const PIN_REST_EPSILON = 0.0005;
+export const PIN_REST_EPSILON = 0.005;
 export const BALL_MASS = 6.0;
 export const BALL_RADIUS = 0.108;
 export const BALL_START_POS = new THREE.Vector3(0, BALL_RADIUS, 0);
