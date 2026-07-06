@@ -1,4 +1,4 @@
-import { createBowlingApp } from '/src/app/createBowlingApp.js'
+import { createBowlingApp } from "/src/app/createBowlingApp.js";
 
 // ============================================================
 // مسؤولية العضو 1: نقطة تشغيل التطبيق
@@ -6,11 +6,11 @@ import { createBowlingApp } from '/src/app/createBowlingApp.js'
 // ============================================================
 
 // main.js بقي نقطة تشغيل فقط: ينشئ التطبيق ويصدّر أوامر التحكم لمن يحتاجها خارجياً.
-const app = createBowlingApp()
-app.start()
+const app = createBowlingApp();
+app.start();
 
-export const launchBall = app.launchBall
-export const stopSimulation = app.stopSimulation
-export const resetSimulation = app.resetSimulation
-export const newFrame = app.newFrame
-export const getPhysicsState = app.getPhysicsState
+export const launchBall = app.launchBall;
+export const stopSimulation = app.stopSimulation;
+export const resetSimulation = app.resetSimulation;
+export const newFrame = app.newFrame;
+export const getPhysicsState = app.getPhysicsState;

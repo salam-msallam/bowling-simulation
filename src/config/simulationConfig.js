@@ -1,4 +1,4 @@
-import * as THREE from 'three'
+import * as THREE from "three";
 
 // ============================================================
 // مسؤولية مشتركة بين الأعضاء
@@ -7,21 +7,21 @@ import * as THREE from 'three'
 // ============================================================
 
 // ثوابت المحاكاة المركزية حتى لا تتكرر الأرقام داخل ملفات المشهد والفيزياء.
-export const SETTLE_FRAME_DELAY = 45
-export const SUMMARY_FALLBACK_FRAME_DELAY = 120
-export const PIN_REST_EPSILON = 0.0005
-export const BALL_MASS = 6.0
-export const BALL_RADIUS = 0.108
-export const BALL_START_POS = new THREE.Vector3(0, BALL_RADIUS, 0)
-export const PIN_VISUAL_HEIGHT = 0.38
-export const PIN_VISUAL_FLOOR_OFFSET = 0.055
-export const LANE_END_Z = 18.5
-export const PIN_FALL_SOUND_COOLDOWN_MS = 140
-
+export const SETTLE_FRAME_DELAY = 45;
+export const SUMMARY_FALLBACK_FRAME_DELAY = 120;
+export const PIN_REST_EPSILON = 0.0005;
+export const BALL_MASS = 6.0;
+export const BALL_RADIUS = 0.108;
+export const BALL_START_POS = new THREE.Vector3(0, BALL_RADIUS, 0);
+export const PIN_VISUAL_HEIGHT = 0.38;
+export const PIN_VISUAL_FLOOR_OFFSET = 0.055;
+export const LANE_END_Z = 18.5;
+export const PIN_FALL_SOUND_COOLDOWN_MS = 140;
+export const GRAVITY = 9.81;
 export const SOUND_PATHS = {
-  rollingBall: '/sounds/freesound_community-bowling-ball-90863 (1).mp3',
-  pinFall: '/sounds/emycutiepants-bowling-strike-339170.mp3',
-}
+  rollingBall: "/sounds/freesound_community-bowling-ball-90863 (1).mp3",
+  pinFall: "/sounds/emycutiepants-bowling-strike-339170.mp3",
+};
 
 export const DEFAULT_RENDER_SETTINGS = {
   bloom: true,
@@ -30,10 +30,10 @@ export const DEFAULT_RENDER_SETTINGS = {
   bloomThreshold: 0.72,
   exposure: 1.08,
   shadows: true,
-}
+};
 
 export function createRenderSettings() {
-  return { ...DEFAULT_RENDER_SETTINGS }
+  return { ...DEFAULT_RENDER_SETTINGS };
 }
 
 // إعدادات نهاية المسار مجمعة هنا لأن أكثر من ملف يحتاج أبعاد الجدار والفتحة واللافتة.
@@ -61,12 +61,12 @@ export const PIN_END_DESIGN = {
     z: 20.075,
     width: 2.7,
     height: 1.08,
-    red: '#ff2d4d',
-    cyan: '#22dfff',
+    red: "#ff2d4d",
+    cyan: "#22dfff",
   },
-}
+};
 
 export const CAMERA_MODES = {
-  PLAYER: 'player',
-  IMPACT: 'impact',
-}
+  PLAYER: "player",
+  IMPACT: "impact",
+};
