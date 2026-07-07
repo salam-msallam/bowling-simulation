@@ -8,7 +8,7 @@ export const SETTLE_FRAME_DELAY = 45;
 export const SUMMARY_FALLBACK_FRAME_DELAY = 120;
 
 // دمجنا القيمة الأكثر استقراراً (0.005) مع تعريفات الأبعاد الجديدة
-export const PIN_REST_EPSILON = 0.005;
+export const PIN_REST_EPSILON = 0.05;
 
 export const BALL_MASS = 6.0;
 export const BALL_RADIUS = 0.108;
