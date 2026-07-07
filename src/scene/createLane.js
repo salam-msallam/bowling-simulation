@@ -1,4 +1,9 @@
 import * as THREE from 'three'
+import {
+  GUTTER_CENTER_X,
+  GUTTER_WIDTH,
+  LANE_PLAYABLE_HALF_WIDTH,
+} from '/src/config/simulationConfig.js'
 
 // ============================================================
 // مسؤولية العضو 4: بناء المسار
@@ -39,7 +44,7 @@ export function createCinematicLane(materials) {
 
   const lane = new THREE.Mesh(
     // جسم المسار نفسه صندوق رفيع فوق أرضية الصالة.
-    new THREE.BoxGeometry(1.05, 0.06, 18),
+    new THREE.BoxGeometry(LANE_PLAYABLE_HALF_WIDTH * 2, 0.06, 18),
     new THREE.MeshPhysicalMaterial({
       map: materials.woodMap,
       normalMap: materials.woodNormal,
@@ -93,8 +98,8 @@ export function createCinematicLane(materials) {
     envMapIntensity: 0.8,
   })
 
-  ;[-0.68, 0.68].forEach((x) => {
-    const gutter = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.07, 18.4), gutterMaterial)
+  ;[-GUTTER_CENTER_X, GUTTER_CENTER_X].forEach((x) => {
+    const gutter = new THREE.Mesh(new THREE.BoxGeometry(GUTTER_WIDTH, 0.07, 18.4), gutterMaterial)
     gutter.position.set(x, -0.015, 9.1)
     gutter.receiveShadow = true
     group.add(gutter)

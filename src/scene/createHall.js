@@ -239,11 +239,6 @@ function createPinDeckPit() {
     envMapIntensity: 0.72,
   })
 
-  const deck = new THREE.Mesh(new THREE.BoxGeometry(pit.width, 0.045, pit.depth), pitMaterial)
-  deck.position.set(0, pit.floorY, pit.centerZ)
-  deck.receiveShadow = true
-  group.add(deck)
-
   const backPanel = new THREE.Mesh(new THREE.BoxGeometry(pit.width, 0.92, 0.08), pitMaterial)
   backPanel.position.set(0, 0.48, 18.98)
   backPanel.receiveShadow = true
