@@ -11,9 +11,9 @@ function isTypingInControl(target) {
 
 export function bindControls({ ui, app, setCameraMode, applyRenderSettings }) {
   // هذا الملف يربط واجهة lil-gui واختصارات لوحة المفاتيح بأوامر التطبيق فقط.
-  ui.onLaunch(({ v0, angle, revRate, oilPattern }) => {
+  ui.onLaunch((inputs) => {
     // زر Launch يرسل قيم الواجهة الحالية إلى منطق المحاكاة.
-    app.launchBall(v0, angle, revRate, oilPattern)
+    app.launchBall(inputs)
   })
 
   ui.onReset(() => {
@@ -42,8 +42,7 @@ export function bindControls({ ui, app, setCameraMode, applyRenderSettings }) {
 
     if (event.code === 'Space' && !isTypingInControl(event.target)) {
       event.preventDefault()
-      const { v0, angle, revRate, oilPattern } = ui.getInputs()
-      app.launchBall(v0, angle, revRate, oilPattern)
+      app.launchBall(ui.getInputs())
     }
   }, true)
 }

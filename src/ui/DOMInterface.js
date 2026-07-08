@@ -23,6 +23,7 @@ export class DOMInterface {
       angle: 0,
       revRate: 250,
       oilPattern: "Medium",
+      ballMass: 6.0,
       gravity: 9.81, // أضفناها هنا
     };
 
@@ -91,6 +92,9 @@ export class DOMInterface {
     launchFolder.add(this.inputs, "v0", 5, 10, 0.1).name("Velocity");
     launchFolder.add(this.inputs, "angle", -5, 5, 0.1).name("Angle (deg)");
     launchFolder.add(this.inputs, "revRate", 0, 400, 10).name("Rev Rate");
+    launchFolder
+      .add(this.inputs, "ballMass", 2.7, 7.3, 0.1)
+      .name("Ball Mass (kg)");
     launchFolder.add(this.inputs, "gravity", 1, 20, 0.1).name("Gravity");
     launchFolder.add(this.hudData, "Launch").name("Launch Ball");
     launchFolder.add(this.hudData, "Reset").name("Reset");
@@ -220,6 +224,7 @@ export class DOMInterface {
       angle: this.inputs.angle,
       revRate: this.inputs.revRate,
       oilPattern: this.inputs.oilPattern,
+      ballMass: this.inputs.ballMass,
       gravity: this.inputs.gravity, // أضفناها
     };
   }

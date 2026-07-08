@@ -23,12 +23,6 @@ function addPosterSpotlight(group, { side, z, posterY }) {
   })
   const glowMaterial = new THREE.MeshBasicMaterial({ color: softLightColor })
 
-  const wallPlate = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.18, 0.34), fixtureMaterial)
-  // قاعدة صغيرة على الحائط تجعل مصدر الضوء مفهوماً بصرياً.
-  wallPlate.position.set(side * 4.035, lightY, lightZ)
-  wallPlate.rotation.y = side > 0 ? 0 : Math.PI
-  group.add(wallPlate)
-
   const lampHead = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.115, 0.22, 24), fixtureMaterial)
   // رأس المصباح موجه نحو البوستر.
   lampHead.rotation.z = side * Math.PI / 2
@@ -81,14 +75,6 @@ function createWallPosters(materials) {
   ].forEach(({ side, textures, rotationY }) => {
     textures.forEach((texturePath, index) => {
       const z = posterZPositions[index]
-
-      const frame = new THREE.Mesh(
-        new THREE.PlaneGeometry(posterWidth + 0.08, posterHeight + 0.08),
-        new THREE.MeshBasicMaterial({ color: 0x05070d, side: THREE.DoubleSide })
-      )
-      frame.position.set(side * (4.1 - wallInset), posterY, z)
-      frame.rotation.y = rotationY
-      group.add(frame)
 
       const poster = new THREE.Mesh(new THREE.PlaneGeometry(posterWidth, posterHeight), materials.createPosterMaterial(texturePath))
       poster.position.set(side * (4.1 - wallInset * 1.5), posterY, z)

@@ -191,7 +191,7 @@ export function createSimulationController({
   function updateSimulationHUD() {
     const ball = ballPhysics.getState();
     const muK = getCurrentFriction(ball.position.z);
-    const force = muK * BALL_MASS * ballPhysics.g;
+    const force = muK * ballPhysics.mass * ballPhysics.g;
     ui.updateHUD(
       ball.speed,
       ball.angularSpeed,
@@ -235,10 +235,13 @@ export function createSimulationController({
     renderFrame();
   }
 
-  function launchBall(v0, angle, revRate, oilPattern, gravity) {
+  function launchBall(v0, angle, revRate, oilPattern, gravity, ballMass) {
     const params =
-      typeof v0 === "object" ? v0 : { v0, angle, revRate, oilPattern, gravity };
+      typeof v0 === "object"
+        ? v0
+        : { v0, angle, revRate, oilPattern, gravity, ballMass };
     resetFrameState();
+    ballPhysics.mass = params.ballMass ?? BALL_MASS;
     ballPhysics.g = params.gravity !== undefined ? params.gravity : 9.81;
     currentOilPattern = params.oilPattern || "Medium";
     currentOilZone = OilZone.fromPreset(currentOilPattern);
