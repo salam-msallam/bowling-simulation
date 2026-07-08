@@ -6,10 +6,6 @@ import {
   LANE_PLAYABLE_HALF_WIDTH,
 } from "/src/config/simulationConfig.js";
 
-// ============================================================
-// مسؤولية العضو 2: فيزياء الكرة (نسخة مدمجة)
-// ============================================================
-
 class BallPhysics {
   constructor(mass, radius, position, gravity = 9.81) {
     this.mass = mass;
@@ -54,7 +50,6 @@ class BallPhysics {
   update(dt, mu) {
     if (this.phase === "idle" || this.phase === "stopped") return;
 
-    // استخدام الجاذبية الخاصة بكِ من كائن الفيزياء
     const g = this.g;
 
     if (this.phase === "gutter") {
@@ -87,7 +82,6 @@ class BallPhysics {
 
     this.position.addScaledVector(this.velocity, dt);
 
-    // التحقق من دخول المجاري
     if (this.phase !== "gutter") {
       const gutterEntryX = LANE_PLAYABLE_HALF_WIDTH - this.radius;
       if (this.position.x <= -gutterEntryX) {
@@ -97,7 +91,6 @@ class BallPhysics {
       }
     }
 
-    // شروط التوقف
     if (this.velocity.z <= 0.01 || this.position.z >= LANE_END_Z) {
       this.velocity.set(0, 0, 0);
       this.angularVelocity.set(0, 0, 0);

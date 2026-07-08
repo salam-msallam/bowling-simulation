@@ -2,13 +2,7 @@ import * as THREE from 'three'
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 
-// ============================================================
-// مسؤولية العضو 4: الإضاءة والبيئة
-// ركز هنا عند تعديل HDR، الظلال، إضاءة الدبابيس، أو المزاج العام للصالة.
-// ============================================================
-
 export function configureShadowLight(light, size = 1024) {
-  // يضبط إعدادات الظلال المشتركة لأي SpotLight يحتاج ظلالاً ناعمة.
   light.castShadow = true
   light.shadow.mapSize.set(size, size)
   light.shadow.camera.near = 0.5
@@ -17,19 +11,17 @@ export function configureShadowLight(light, size = 1024) {
 }
 
 export function createLighting({ scene, renderer }) {
-  // الإضاءة العامة وخرائط HDR توضع هنا حتى يبقى بناء المجسمات منفصلاً عن إعداد الضوء.
   const pmremGenerator = new THREE.PMREMGenerator(renderer)
   pmremGenerator.compileEquirectangularShader()
 
   function applyEnvironment(texture) {
-    // نحول HDR إلى environment map مناسب لانعكاسات خامات PBR.
     const envMap = pmremGenerator.fromEquirectangular(texture).texture
     scene.environment = envMap
     texture.dispose()
   }
 
   function applyFallbackEnvironment() {
-    // fallback داخلي إذا فشل تحميل HDR الخارجي حتى لا يبقى المشهد بلا انعكاسات.
+    // Keeps PBR materials reflective if HDR loading fails.
     const roomEnvironment = new RoomEnvironment()
     const envMap = pmremGenerator.fromScene(roomEnvironment, 0.04).texture
     scene.environment = envMap
@@ -37,7 +29,6 @@ export function createLighting({ scene, renderer }) {
   }
 
   const loader = new RGBELoader()
-  // نحاول تحميل HDR الصالة أولاً، ثم HDR بديل، ثم RoomEnvironment.
   loader.load(
     '/hdr/bowling_hall_1k.hdr',
     applyEnvironment,

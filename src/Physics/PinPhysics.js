@@ -1,9 +1,5 @@
 import * as THREE from "three";
 
-// ============================================================
-// مسؤولية العضو 3: فيزياء الدبابيس
-// ============================================================
-
 const INIT_POSITIONS = [
   { x: 0.0, z: 17.0 },
   { x: -0.15, z: 17.3 },
@@ -208,9 +204,7 @@ export class PinPhysics {
 
   update(dt) {
     this.pins.forEach((pin) => {
-      // نتجاهل فقط الدبابيس التي استقرت تماماً
       if (pin.isAtRest) return;
-      // لا نحدث فيزياء الحركة للدبابيس الواقفة
       if (pin.isStanding) return;
 
       const isOnFloor = pin.position.y <= PIN_REST_Y && pin.velocity.y <= 0;
@@ -287,7 +281,6 @@ export class PinPhysics {
       }
     });
 
-    // حل التداخلات لجميع الدبابيس بما فيها الواقفة لضمان التفاعل
     resolvePinToPinOverlaps(this.pins);
   }
 

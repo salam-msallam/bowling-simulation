@@ -1,19 +1,13 @@
 import * as THREE from "three";
 
-// ============================================================
-// مسؤولية مشتركة: ثوابت المحاكاة المركزية (نسخة مدمجة)
-// ============================================================
-
 export const SETTLE_FRAME_DELAY = 45;
 export const SUMMARY_FALLBACK_FRAME_DELAY = 120;
 
-// دمجنا القيمة الأكثر استقراراً (0.005) مع تعريفات الأبعاد الجديدة
 export const PIN_REST_EPSILON = 0.05;
 
 export const BALL_MASS = 6.0;
 export const BALL_RADIUS = 0.108;
 
-// أبعاد المسار والمجاري (إضافات الزميلة)
 export const LANE_SURFACE_Y = 0.03;
 export const BALL_LANE_Y = BALL_RADIUS + LANE_SURFACE_Y;
 export const BALL_START_POS = new THREE.Vector3(0, BALL_LANE_Y, 0);
@@ -28,7 +22,6 @@ export const PIN_VISUAL_FLOOR_OFFSET = 0.055;
 export const LANE_END_Z = 18.5;
 export const PIN_FALL_SOUND_COOLDOWN_MS = 140;
 
-// إبقاء الجاذبية ثابتة مركزية
 export const GRAVITY = 9.81;
 
 export const SOUND_PATHS = {
@@ -38,10 +31,10 @@ export const SOUND_PATHS = {
 
 export const DEFAULT_RENDER_SETTINGS = {
   bloom: true,
-  bloomStrength: 0.38,
-  bloomRadius: 0.38,
-  bloomThreshold: 0.72,
-  exposure: 1.08,
+  bloomStrength: 0.18,
+  bloomRadius: 0.28,
+  bloomThreshold: 0.86,
+  exposure: 0.92,
   shadows: true,
 };
 

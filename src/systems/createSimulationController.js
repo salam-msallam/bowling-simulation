@@ -15,10 +15,6 @@ import {
   GRAVITY,
 } from "/src/config/simulationConfig.js";
 
-// ============================================================
-// مسؤولية العضو 6: حلقة المحاكاة وحالة الجولة (نسخة مدمجة ومصححة)
-// ============================================================
-
 function pinStateDelta(a, b) {
   return Math.max(
     Math.abs(a.position.x - b.position.x),

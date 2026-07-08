@@ -1,43 +1,31 @@
 import GUI from "lil-gui";
 
-// ============================================================
-// مسؤولية العضو 5: واجهة التحكم والـ HUD
-// هذا الملف يبني لوحة lil-gui: إعدادات الرمية، نمط الزيت، الكاميرا، جودة الرندر،
-// حالة الكرة الحية، وملخص النتيجة. لا يحتوي فيزياء؛ فقط يرسل callbacks إلى main.js.
-// ============================================================
-
-// هذه الكلاس مسؤولة فقط عن واجهة التحكم والـ HUD.
-// لا تحتوي فيزياء أو Three.js مباشرة؛ هي ترسل أحداث إلى main.js عبر callbacks.
 export class DOMInterface {
   constructor(renderSettings = {}) {
-    // الكولباكات يتم تسجيلها من main.js حتى تبقى الواجهة مفصولة عن منطق المحاكاة.
     this.launchCallback = null;
     this.resetCallback = null;
     this.newFrameCallback = null;
     this.renderSettingsCallback = null;
     this.cameraModeCallback = null;
 
-    // قيم الرمية التي يغيرها المستخدم من لوحة Launch.
     this.inputs = {
       v0: 7.5,
       angle: 0,
       revRate: 250,
       oilPattern: "Medium",
       ballMass: 6.0,
-      gravity: 9.81, // أضفناها هنا
+      gravity: 9.81,
     };
 
-    // إعدادات الرندر تبدأ من main.js، ثم يمكن تعديلها مباشرة من واجهة Render Quality.
     this.renderSettings = {
       bloom: renderSettings.bloom ?? true,
-      bloomStrength: renderSettings.bloomStrength ?? 0.38,
-      bloomRadius: renderSettings.bloomRadius ?? 0.38,
-      bloomThreshold: renderSettings.bloomThreshold ?? 0.72,
-      exposure: renderSettings.exposure ?? 1.08,
+      bloomStrength: renderSettings.bloomStrength ?? 0.18,
+      bloomRadius: renderSettings.bloomRadius ?? 0.28,
+      bloomThreshold: renderSettings.bloomThreshold ?? 0.86,
+      exposure: renderSettings.exposure ?? 0.92,
       shadows: renderSettings.shadows ?? true,
     };
 
-    // بيانات الـ HUD الحي؛ القيم نصية لأنها تعرض مباشرة داخل lil-gui.
     this.hudData = {
       speed: "0.00 m/s",
       angularVelocity: "0.00 rad/s",
@@ -50,7 +38,6 @@ export class DOMInterface {
       Reset: () => this.triggerReset(),
     };
 
-    // بيانات ملخص الرمية تظهر بعد انتهاء الحركة واستقرار الدبابيس.
     this.summaryData = {
       pins: "0 / 10",
       finalVelocity: "0.00 m/s",
@@ -59,7 +46,6 @@ export class DOMInterface {
       "Summary Reset": () => this.triggerReset(),
     };
 
-    // أزرار تغيير الكاميرا؛ الاختصارات نفسها موجودة أيضاً في main.js عبر لوحة المفاتيح.
     this.cameraActions = {
       "Player View": () => this.triggerCameraMode("player"),
       "Impact View": () => this.triggerCameraMode("impact"),
@@ -69,7 +55,6 @@ export class DOMInterface {
   }
 
   initGUI() {
-    // لوحة التحكم الرئيسية: إطلاق الكرة، اختيار الزيت، الكاميرا، وجودة الرندر.
     this.guiControls = new GUI({ title: "Bowling Simulation" });
     this.guiControls.domElement.style.position = "fixed";
     this.guiControls.domElement.style.left = "18px";
@@ -88,7 +73,6 @@ export class DOMInterface {
     );
 
     const launchFolder = this.guiControls.addFolder("Launch");
-    // هذه القيم تتحول لاحقاً إلى سرعة وزاوية ودوران داخل BallPhysics.
     launchFolder.add(this.inputs, "v0", 5, 10, 0.1).name("Velocity");
     launchFolder.add(this.inputs, "angle", -5, 5, 0.1).name("Angle (deg)");
     launchFolder.add(this.inputs, "revRate", 0, 400, 10).name("Rev Rate");
@@ -105,7 +89,6 @@ export class DOMInterface {
       .add(this.inputs, "oilPattern", ["Short", "Medium", "Long"])
       .name("Pattern")
       .onChange((value) => {
-        // نحدث قراءة نهاية الزيت فوراً حتى يفهم المستخدم أثر النمط قبل إطلاق الكرة.
         let endDist = 12;
         if (value === "Short") endDist = 9;
         if (value === "Long") endDist = 15;
@@ -114,13 +97,11 @@ export class DOMInterface {
     oilFolder.open();
 
     const cameraFolder = this.guiControls.addFolder("Camera");
-    // أزرار الكاميرا مفيدة لمن لا يستخدم اختصارات لوحة المفاتيح.
     cameraFolder.add(this.cameraActions, "Player View").name("1 - Player View");
     cameraFolder.add(this.cameraActions, "Impact View").name("3 - Impact View");
     cameraFolder.open();
 
     const renderFolder = this.guiControls.addFolder("Render Quality");
-    // كل تغيير هنا يرسل نسخة جديدة من الإعدادات إلى main.js لتحديث renderer/composer.
     renderFolder
       .add(this.renderSettings, "bloom")
       .name("Bloom")
@@ -146,7 +127,6 @@ export class DOMInterface {
       .name("Shadows")
       .onChange(() => this.emitRenderSettings());
 
-    // لوحة HUD منفصلة على يمين الشاشة حتى تبقى قراءة حالة الكرة ظاهرة أثناء اللعب.
     this.guiHUD = new GUI({ title: "Live HUD" });
     this.guiHUD.domElement.style.position = "fixed";
     this.guiHUD.domElement.style.right = "18px";
@@ -164,7 +144,6 @@ export class DOMInterface {
     );
 
     const hudFolder = this.guiHUD.addFolder("Ball State");
-    // controllersHUD محفوظة حتى نستطيع تحديث العرض يدوياً بعد تغيير القيم النصية.
     this.controllersHUD = {
       speed: hudFolder.add(this.hudData, "speed").name("Speed").disable(),
       angularVelocity: hudFolder
@@ -191,7 +170,6 @@ export class DOMInterface {
     };
     hudFolder.open();
 
-    // لوحة الملخص تظهر في الوسط فقط عند انتهاء الرمية، وتختفي عند reset أو frame جديد.
     this.guiSummary = new GUI({ title: "Simulation Summary" });
     this.guiSummary.domElement.style.position = "fixed";
     this.guiSummary.domElement.style.left = "50%";
@@ -218,18 +196,16 @@ export class DOMInterface {
   }
 
   getInputs() {
-    // main.js يقرأ نسخة نظيفة من المدخلات بدل الوصول المباشر إلى كائن الواجهة.
     return {
       v0: this.inputs.v0,
       angle: this.inputs.angle,
       revRate: this.inputs.revRate,
       oilPattern: this.inputs.oilPattern,
       ballMass: this.inputs.ballMass,
-      gravity: this.inputs.gravity, // أضفناها
+      gravity: this.inputs.gravity,
     };
   }
 
-  // دوال التسجيل التالية تجعل main.js يحدد ماذا يحدث عند ضغط أزرار الواجهة.
   onLaunch(callback) {
     this.launchCallback = callback;
   }
@@ -244,41 +220,34 @@ export class DOMInterface {
   }
   onRenderSettingsChange(callback) {
     this.renderSettingsCallback = callback;
-    // نرسل الإعدادات فور التسجيل حتى يبدأ renderer بالقيم المتزامنة مع الواجهة.
     this.emitRenderSettings();
   }
 
   emitRenderSettings() {
-    // نرسل نسخة من الإعدادات حتى لا يعدل main.js الكائن الداخلي مباشرة.
     if (this.renderSettingsCallback) {
       this.renderSettingsCallback({ ...this.renderSettings });
     }
   }
 
   triggerLaunch() {
-    // عند الإطلاق نقرأ القيم الحالية ونمررها لمنطق المحاكاة.
     if (this.launchCallback) this.launchCallback(this.getInputs());
   }
 
   triggerReset() {
-    // أي reset يخفي الملخص أولاً حتى لا يبقى فوق المشهد بعد إعادة المحاكاة.
     this.guiSummary.hide();
     if (this.resetCallback) this.resetCallback();
   }
 
   triggerNewFrame() {
-    // frame جديد يعني نفس إعادة الضبط لكن مع نية بدء محاولة جديدة.
     this.guiSummary.hide();
     if (this.newFrameCallback) this.newFrameCallback();
   }
 
   triggerCameraMode(mode) {
-    // الواجهة لا تتحقق من الكاميرا؛ main.js يقرر إن كان mode صالحاً.
     if (this.cameraModeCallback) this.cameraModeCallback(mode);
   }
 
   updateHUD(v, w, phase, muK, x, frameCount, oilPatternEnd = 12) {
-    // تحويل القيم الرقمية إلى نصوص مقروءة قبل عرضها داخل lil-gui.
     this.hudData.speed = `${v.toFixed(2)} m/s`;
     this.hudData.angularVelocity = `${w.toFixed(2)} rad/s`;
     this.hudData.phase = String(phase ?? "idle");
@@ -294,7 +263,6 @@ export class DOMInterface {
   }
 
   showSummary({ pinsKnockedDown, finalBallVelocity, oilPatternName }) {
-    // ملخص الرمية يعرض النتيجة النهائية بعد أن يقرر main.js أن المحاكاة استقرت.
     this.summaryData.pins = `${Math.trunc(pinsKnockedDown)} / 10`;
     this.summaryData.finalVelocity = `${finalBallVelocity.toFixed(2)} m/s`;
     this.summaryData.finalOil = String(oilPatternName ?? "Medium");
@@ -306,7 +274,6 @@ export class DOMInterface {
   }
 
   hideSummary() {
-    // دالة صغيرة للاستخدام الخارجي إذا احتجنا إخفاء الملخص بدون reset كامل.
     this.guiSummary.hide();
   }
 }

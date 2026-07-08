@@ -18,14 +18,7 @@ import { createAudioSystem } from "/src/systems/createAudioSystem.js";
 import { createCameraSystem } from "/src/systems/createCameraSystem.js";
 import { createSimulationController } from "/src/systems/createSimulationController.js";
 
-// ============================================================
-// مسؤولية العضو 1: تجميع التطبيق
-// ركز هنا لفهم ترتيب تشغيل الأنظمة: مشهد، إضاءة، خامات، صالة، مسار، نماذج، واجهة، صوت، كاميرا، ومحاكاة.
-// كل عضو يرجع من هذا الملف إلى ملفه المتخصص بدل البحث داخل main.js.
-// ============================================================
-
 export function createBowlingApp() {
-  // نقطة التجميع الوحيدة: تنشئ الأنظمة وتربطها بدون تفاصيل بناء داخل main.js.
   const renderSettings = createRenderSettings();
   const rendererScene = createRendererScene(renderSettings);
   const { scene, renderer, composer, bloomPass, cameras } = rendererScene;

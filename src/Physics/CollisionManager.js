@@ -1,22 +1,16 @@
 import * as THREE from "three";
 
-// ============================================================
-// مسؤولية العضو 3: التصادمات (النسخة الأصلية)
-// ============================================================
-
 export class CollisionManager {
   constructor(ball, pinManager) {
     this.ball = ball;
     this.pinManager = pinManager;
 
-    // أبعاد تقريبية بالمتر تستخدم لحساب مسافة التماس بين الكرة والدبوس.
     this.ballRadius = 0.108;
     this.pinRadius = 0.06;
     this.collisionThreshold = this.ballRadius + this.pinRadius;
   }
 
   checkCollisions() {
-    // تصادم الكرة مع الدبابيس
     this.pinManager.pins.forEach((pin) => {
       if (!pin.isStanding) return;
 
@@ -29,7 +23,6 @@ export class CollisionManager {
       }
     });
 
-    // تصادم الدبابيس ببعضها (تأثير الدومينو)
     this.checkPinToPinCollisions();
   }
 
@@ -72,7 +65,6 @@ export class CollisionManager {
         const p1 = pins[i];
         const p2 = pins[j];
 
-        // شرط التصادم: واحد واقف وواحد متحرك
         if (p1.isStanding && p2.isStanding) continue;
         if (!p1.isStanding && !p2.isStanding) continue;
 

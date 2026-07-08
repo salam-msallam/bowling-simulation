@@ -1,12 +1,6 @@
 import * as THREE from 'three'
 
-// ============================================================
-// مسؤولية العضو 6: الصوت
-// ركز هنا عند تعديل صوت تدحرج الكرة، صوت سقوط الدبابيس، مستوى الصوت، أو منع تكرار الصوت بسرعة.
-// ============================================================
-
 export function createAudioSystem({ soundPaths, pinFallCooldownMs }) {
-  // نظام الصوت معزول هنا: صوت الكرة حلقة مستمرة، وصوت الدبابيس يعاد استخدامه بعدة نسخ.
   const rollingBallSound = new Audio(soundPaths.rollingBall)
   rollingBallSound.preload = 'auto'
   rollingBallSound.loop = true
@@ -22,7 +16,7 @@ export function createAudioSystem({ soundPaths, pinFallCooldownMs }) {
   let lastPinFallSoundTime = 0
 
   function playSound(sound) {
-    // قد يمنع المتصفح الصوت قبل أول تفاعل؛ نتجاهل الخطأ حتى لا تتوقف المحاكاة.
+    // Browsers may block audio before the first user interaction.
     sound.play().catch(() => {})
   }
 
@@ -59,7 +53,6 @@ export function createAudioSystem({ soundPaths, pinFallCooldownMs }) {
   }
 
   function resetPinFallCooldown() {
-    // يستخدم عند reset حتى لا يمنع cooldown القديم صوت أول سقوط في الرمية الجديدة.
     lastPinFallSoundTime = 0
   }
 
